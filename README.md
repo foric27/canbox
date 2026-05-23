@@ -1,39 +1,176 @@
 # canbox
-Firmware for some canbus boxes which are available on aliexpress.
 
-A canbus box is a device that allows you to connect your Android device to a CAN bus
+Прошивка для CAN-адаптеров (canbus box), доступных на AliExpress.
 
-General canbus box features:
-- turns on power for android when the ignition is turned on
-- turns on the power for the rear view camera
-- toggle backlight for android
-- displaying the state of the car on the android screen(open doors, parking sensors, etc.)
+## Назначение
+
+CAN-адаптер — устройство, сопрягающее головное устройство (ГУ) на Android с CAN-шиной автомобиля. 
+
+**Возможности:**
+- подача питания на ГУ при включении зажигания (ACC)
+- включение камеры заднего хода при селекторе R
+- управление подсветкой экрана ГУ в зависимости от уровня освещения
+- отображение состояния автомобиля на экране ГУ:
+  - открытие дверей, капота, багажника
+  - показания парктроников
+  - положение селектора АКПП
+  - одометр, VIN, температура ОЖ, напряжение бортсети
+  - климат-контроль
 
 ![canbus box](canbus.png)
 
+## Поддерживаемые платформы
 
-Since the adapter supports several car models and protocols, the adapter must first be configured for a specific car. To configure, the adapter must be connected to the Rx and TX lines at 38400 speed using any terminal program (putty, hyperterminal, minicom ...)
-Changing the configuration of the adapter is possible in debug mode. Switching to debug mode occurs when you press the corresponding keys on the keyboard:
-- OOOOOOOOOOOOO switch to debug mode (must send at least 10 O characters in 1 second)
-- o switch to normal mode
-- b selection of the emulated protocol from the list Raise VW(PQ), Raise VW(MQB), Oudi BMW(Nbt Evo, HiWorld VW(MQB)
-- c selection of a car from the list FL2 2007MY, FL2 2013MY, XC90 2007MY
-- I increase the backlight level threshold
-- i decrease the backlight level threshold
-- D increase camera turn off delay
-- d decrease camera turn off delay
-- m selection of active CAN message
-- s save configuration
+| Адаптер | MCU | Ядро | Протокол |
+|---------|-----|------|----------|
+| OD-Volvo-02 | STM32F103x8 | Cortex-M3 | Raise VW(PQ/MQB), Oudi BMW NBT Evo, HiWorld VW(MQB) |
+| VW-NC03 | Nuvoton NUC131 | Cortex-M0 | CAN-кадры через аппаратный CAN-контроллер |
 
+## Поддерживаемые автомобили
 
-You can also check the firmware using the emulator qemu. Below is the debug window of the firmware launched in the emulator qemu with help command "make run_qemu"
+| Модель | CAN-шина |
+|--------|----------|
+| Land Rover Freelander 2 (2007 MY) | HS-CAN 500 кбит/с |
+| Land Rover Freelander 2 (2013 MY) | HS-CAN 500 кбит/с |
+| Volvo XC90 (2007 MY) | HS-CAN 500 кбит/с |
+| Skoda Fabia (2006 MY) | 100 кбит/с |
+| Audi Q3 (2015 MY, MQB) | HS-CAN 500 кбит/с |
+| Toyota Premio (260-series) | — |
+
+## Конфигурирование
+
+Адаптер необходимо настроить под конкретный автомобиль и протокол обмена с ГУ. Для конфигурирования подключите адаптер к линиям RX и TX на скорости **38400 бод** любым терминалом (PuTTY, HyperTerminal, minicom, screen).
+
+Переключение в режим отладки происходит при отправке не менее **10 символов «O» за 1 секунду**.
+
+**Команды режима отладки:**
+
+| Клавиша | Действие |
+|---------|----------|
+| `OOOOOOOOOOOOO` | вход в режим отладки |
+| `o` | выход в нормальный режим |
+| `b` | выбор эмулируемого протокола ГУ: Raise VW(PQ) → Raise VW(MQB) → Oudi BMW NBT Evo → HiWorld VW(MQB) |
+| `c` | выбор автомобиля: AnyMsg → LR2 2007MY → LR2 2013MY → XC90 2007MY → Skoda Fabia → Audi Q3 → Toyota Premio |
+| `I` / `i` | увеличить / уменьшить порог включения подсветки (0—100%) |
+| `D` / `d` | увеличить / уменьшить задержку отключения камеры заднего хода (0—8000 мс) |
+| `m` | переключение активного CAN-сообщения для сниффера |
+| `s` | сохранить конфигурацию во flash / в режиме сниффера — выход в главное окно |
+| `S` | открыть окно сниффера CAN-шины |
+
+## Сборка из исходников
+
+### Зависимости
+```bash
+# ARM toolchain
+sudo apt install gcc-arm-none-eabi
+
+# libopencm3 — уже в репозитории (libopencm3/)
+
+# Патченный OpenOCD для NUC131 (опционально, для прошивки)
+# Применить openocd-fix.diff к исходникам OpenOCD, собрать, установить в /opt/openocd-nuvoton/
+
+# Патченный QEMU 7.2.0 для STM32 (опционально, для эмуляции)
+# Применить qemu-7.2.0-fix.diff, собрать, установить в /opt/qemu-stm32/
+
+# Qt-эмулятор (опционально)
+sudo apt install qt6-base-dev libqt6serialport6-dev
+```
+
+### Команды сборки
+```bash
+make                  # сборка всех трёх прошивок: vw_nc03.bin, volvo_od2.bin, qemu.bin
+make clean            # удаление артефактов сборки
+make run_qemu         # сборка и запуск в QEMU (stm32vldiscovery)
+make flash_volvo_od2  # прошивка OD-Volvo-02 через OpenOCD (с разблокировкой RDP)
+make flash_vw_nc03    # прошивка VW-NC03 через патченный OpenOCD
+make test_nuc         # чтение регистров NUC131 через OpenOCD
+
+# Qt-эмулятор
+cd qt && qmake qcanbox.pro && make   # сборка qcanbox
+```
+
+## Структура проекта
+
+```
+canbox/
+├── src/                  # ядро прошивки (8 .c-файлов)
+│   ├── main.c            # точка входа, главный цикл (1/5/100/250/1000 мс домены)
+│   ├── canbox.c          # протоколы обмена с ГУ (Raise VW, HiWorld VW, OD BMW)
+│   ├── car.c             # модель данных авто, диспетчер CAN-сообщений
+│   ├── conf.c            # хранение конфигурации во flash, wear-leveling
+│   ├── hw.c              # инициализация/сон железа
+│   ├── ring.c            # кольцевой буфер (USART RX/TX)
+│   ├── tick.c            # системный таймер, флаги временных доменов
+│   └── sbrk.c            # менеджер кучи (newlib _sbrk_r)
+├── include/              # заголовочные файлы API (10 .h-файлов)
+│   ├── hw.h, hw_can.h, hw_usart.h, hw_tick.h, hw_clock.h, hw_conf.h
+│   ├── canbox.h, car.h, conf.h, ring.h
+├── cars/                 # обработчики CAN-сообщений (7 автомобилей)
+├── volvo_od2/
+│   ├── fw/               # аппаратная прослойка STM32F103 (hw_*.c) + линкер + OpenOCD
+│   └── hw/               # схема и печатная плата (KiCad)
+├── vw_nc03/
+│   ├── fw/               # аппаратная прослойка NUC131 (hw_*.c) + линкер + OpenOCD + BSP
+│   └── hw/               # схема и печатная плата (KiCad)
+├── qemu/fw/              # заглушки аппаратуры для эмуляции в QEMU
+├── qt/                   # десктопный эмулятор (C++/Qt)
+├── libopencm3/           # вендоренная копия STM32 HAL (не submodule)
+├── Makefile              # корневой Makefile + 4 вариантных Makefile_*
+├── openocd-fix.diff      # патч OpenOCD для NUC131
+├── qemu-7.2.0-fix.diff   # патч QEMU для эмуляции USART STM32
+├── .gitignore            # исключения артефактов сборки
+├── .gitattributes        # настройки окончаний строк, бинарных файлов
+└── .editorconfig         # соглашения о стиле кода
+```
+
+## Архитектура
+
+Ядро прошивки в `src/` компилируется **трижды** для трёх аппаратных платформ с разными `hw_*.c`-прослойками:
+
+- **STM32F103** (OD-Volvo-02) — объектные файлы: `.vo`, HAL: libopencm3
+- **NUC131** (VW-NC03) — объектные файлы: `.vwo`, HAL: Nuvoton BSP
+- **QEMU** (stm32vldiscovery) — объектные файлы: `.qemu`, заглушки в `qemu/fw/`
+
+Дифференциация платформ — через **подстановку файлов** при линковке, не через `#ifdef` (за исключением `_ebss`/`__bss_end__` в `sbrk.c`).
+
+Главный цикл (`src/main.c`) — невытесняющий, флаговый, с доменами:
+- **1 мс** — обработка задержки камеры
+- **5 мс** — диспетчер CAN-сообщений (`car_process`)
+- **100 мс** — отправка данных парктроников
+- **250 мс** — отправка состояния авто в ГУ (`canbox_process`) / вывод отладки
+- **1000 мс** — детектор неактивности CAN-шины → сон
+
+## Нестандартные технические решения
+
+- Кастомные расширения объектных файлов (`.vo`, `.vwo`, `.qemu`, `.stm32f1`) — предотвращают коллизии имён при компиляции одних и тех же исходников под разные MCU
+- `libopencm3` — вендоренная копия, не submodule (для воспроизводимости сборки)
+- `cars/*.c` — не компилируются отдельно, а `#include`-ятся в `car.c`
+- `conf_write()` — wear-leveling запись во flash: пишет в следующий слот, стирает страницу только при заворачивании кольцевого буфера
+- `flash_volvo_od2` — трёхстадийная разблокировка RDP чипа перед программированием
+- `startup_NUC131.o` — собирается из `startup_NUC131.S` по неявному правилу GNU Make
+- Режим отладки через ANSI escape-последовательности (`\033[2J`, `\033[H`) — псевдографический интерфейс в терминале
+- Бинарные файлы прошивок (`*.bin`) закоммичены в репозиторий для пользователей без toolchain
+
+## Эмуляция и отладка
+
+### QEMU
+```bash
+make run_qemu
+```
+Запускает прошивку в QEMU (машина `stm32vldiscovery`). Вывод USART направляется в stdio — можно взаимодействовать с прошивкой через терминал.
 
 ![debug info](qemu.png)
 
+### Qt-эмулятор (qcanbox)
+Десктопное приложение, линкующее те же исходники `canbox.c` + `car.c`. Позволяет вручную эмулировать состояние автомобиля (двери, селектор, ремень) и наблюдать CAN-пакеты через виртуальный COM-порт.
 
-[More info](https://www.drive2.ru/b/599820152787190466/)
+## Поддерживаемое железо
 
 ![od-volvo-02 pcb](volvo_od2/hw/pcb.jpg)
 ![od-volvo-02 circuit](volvo_od2/hw/sch.jpg)
 ![vw_nc03 pcb](vw_nc03/hw/pcb.jpg)
 ![vw_nc03 circuit](vw_nc03/hw/sch.jpg)
+
+---
+
+[Подробнее на Drive2](https://www.drive2.ru/b/599820152787190466/)
