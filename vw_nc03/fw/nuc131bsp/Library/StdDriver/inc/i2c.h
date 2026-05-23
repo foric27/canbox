@@ -6,10 +6,10 @@
  * @brief    NUC131 Series I2C Driver Header File
  *
  * @note
- * SPDX-License-Identifier: Apache-2.0
  *
- * Copyright (C) 2014 Nuvoton Technology Corp. All rights reserved.
+ * @copyright SPDX-License-Identifier: Apache-2.0
  *
+ * @copyright Copyright (C) 2014 Nuvoton Technology Corp. All rights reserved.
  ******************************************************************************/
 #ifndef __I2C_H__
 #define __I2C_H__
@@ -51,6 +51,8 @@ extern "C"
 
 #define I2C_GCMODE_ENABLE           1      /*!< Enable  I2C GC Mode                                                       */
 #define I2C_GCMODE_DISABLE          0      /*!< Disable I2C GC Mode                                                       */
+
+#define I2C_TIMEOUT                 SystemCoreClock /*!< IC time-out counter (1 second time-out)                          */
 
 /*@}*/ /* end of group NUC131_I2C_EXPORTED_CONSTANTS */
 

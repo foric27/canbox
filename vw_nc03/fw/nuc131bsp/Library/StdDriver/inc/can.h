@@ -6,10 +6,10 @@
  * @brief    NUC131 Series CAN Driver Header File
  *
  * @note
- * SPDX-License-Identifier: Apache-2.0
  *
- * Copyright (C) 2014 Nuvoton Technology Corp. All rights reserved.
+ * @copyright SPDX-License-Identifier: Apache-2.0
  *
+ * @copyright Copyright (C) 2014 Nuvoton Technology Corp. All rights reserved.
  ******************************************************************************/
 #ifndef __CAN_H__
 #define __CAN_H__
@@ -50,6 +50,11 @@ extern "C"
 /*---------------------------------------------------------------------------------------------------------*/
 #define    CAN_REMOTE_FRAME    0
 #define    CAN_DATA_FRAME    1
+
+/*---------------------------------------------------------------------------------------------------------*/
+/* CAN Time-out Handler Constant Definitions                                                               */
+/*---------------------------------------------------------------------------------------------------------*/
+#define    CAN_TIMEOUT        SystemCoreClock    /*!< CAN time-out counter (1 second time-out) */
 
 /*---------------------------------------------------------------------------------------------------------*/
 /*  CAN message structure                                                                                  */

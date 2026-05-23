@@ -6,9 +6,9 @@
  * @brief    NUC131 series SYS driver source file
  *
  * @note
- * SPDX-License-Identifier: Apache-2.0
  *
- * Copyright (C) 2014 Nuvoton Technology Corp. All rights reserved.
+ * @copyright SPDX-License-Identifier: Apache-2.0
+ * @copyright Copyright (C) 2014 Nuvoton Technology Corp. All rights reserved.
 *****************************************************************************/
 
 #include "NUC131.h"
@@ -46,7 +46,7 @@ extern "C"
   */
 void SYS_ClearResetSrc(uint32_t u32Src)
 {
-    SYS->RSTSRC |= u32Src;
+    SYS->RSTSRC = u32Src;
 }
 
 /**
@@ -143,7 +143,7 @@ void SYS_ResetCPU(void)
   *             - \ref BPWM0_RST
   *             - \ref BPWM1_RST
   * @return     None
-  * @details    This function reset selected modules.
+  * @details    This function reset selected module.
   */
 void SYS_ResetModule(uint32_t u32ModuleIndex)
 {
@@ -165,9 +165,9 @@ void SYS_ResetModule(uint32_t u32ModuleIndex)
   *             - \ref SYS_BODCR_BOD_VL_2_7V
   *             - \ref SYS_BODCR_BOD_VL_2_2V
   * @return     None
-  * @details    This function configure Brown-out detector reset or interrupt mode, enable Brown-out function and set Brown-out voltage level.
+  * @details    This function configure Brown-out detector function.
+  *             It configure Brown-out detector reset or interrupt mode, enable Brown-out function and set Brown-out voltage level.
   *             The register write-protection function should be disabled before using this function.
-  *
   */
 void SYS_EnableBOD(int32_t i32Mode, uint32_t u32BODLevel)
 {

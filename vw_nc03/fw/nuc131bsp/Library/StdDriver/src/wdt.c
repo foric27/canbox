@@ -6,9 +6,9 @@
  * @brief    NUC131 series WDT driver source file
  *
  * @note
- * SPDX-License-Identifier: Apache-2.0
  *
- * Copyright (C) 2013 Nuvoton Technology Corp. All rights reserved.
+ * @copyright SPDX-License-Identifier: Apache-2.0
+ * @copyright Copyright (C) 2014 Nuvoton Technology Corp. All rights reserved.
 *****************************************************************************/
 #include "NUC131.h"
 
@@ -42,7 +42,7 @@
   *                                 - \ref WDT_RESET_DELAY_130CLK
   *                                 - \ref WDT_RESET_DELAY_18CLK
   *                                 - \ref WDT_RESET_DELAY_3CLK
-  * @param[in]  u32EnableReset      Enable WDT time-out rest system function. Valid values are TRUE and FALSE.
+  * @param[in]  u32EnableReset      Enable WDT time-out reset system function. Valid values are TRUE and FALSE.
   * @param[in]  u32EnableWakeup     Enable WDT time-out wake-up system function. Valid values are TRUE and FALSE.
   *
   * @return     None

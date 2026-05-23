@@ -6,10 +6,10 @@
  * @brief    NUC131 Series Peripheral Access Layer Header File
  *
  * @note
- * SPDX-License-Identifier: Apache-2.0
  *
- * Copyright (C) 2014 Nuvoton Technology Corp. All rights reserved.
+ * @copyright SPDX-License-Identifier: Apache-2.0
  *
+ * @copyright Copyright (C) 2014 Nuvoton Technology Corp. All rights reserved.
  ******************************************************************************/
 
 
@@ -29,41 +29,8 @@
   * for a particular purpose, and non-infringement of intellectual property rights.
   *
   * <b>Copyright Notice</b>
-  *
-  * Copyright (C) 2014 Nuvoton Technology Corp. All rights reserved.
+  * Copyright (C) 2014~2024 Nuvoton Technology Corp. All rights reserved.
   */
-
-
-/**
-  * \page PG_REV Revision History
-  *
-  * <b>Revision 3.00.002</b>
-  * \li Fix PWM driver bug for output low when duty is 100%
-  * \li Fix BPWM driver bug for output low when duty is 100%
-  * \li Fix CLK driver bug in CLK_SetCoreClock():
-  * \li Fix CLK driver constant definitions error of (B)PWM0/1_MODULE clock source selection.
-  * \li Fix GPIO_ENABLE_DOUT_MASK() and GPIO_DISABLE_DOUT_MASK() bug of GPIO driver.
-  * \li Fix PWM driver bug of PWM_MASK_OUTPUT() to remove redundant parenthesis.
-  * \li Fix BPWM driver bug of BPWM_MASK_OUTPUT() to remove redundant parenthesis.
-  * \li Fix UART driver clear flag bug in UART_ClearIntFlag().
-  * \li Fix I2C driver module reset bug of I2C_Close().
-  * \li Fix clear RS-485 address byte detection flag bug in UART_RS485_CLEAR_ADDR_FLAG() of UART driver.
-  * \li Fix SYS_IS_SYSTEM_RST() bug, it is "SYS_RSTSRC_RSTS_SYS_Msk" but "SYS_RSTSRC_RSTS_MCU_Msk".
-  * \li Fix clear RS-485 address byte detection flag clear bug in RS485_HANDLE() of UART_RS485_Slave sample code.
-  * \li Fix UART RS485 RTS active level to high level active in RS485_9bitModeMaster() of UART RS485 Sample code.
-  * \li Fix NVIC_EnableIRQ() to NVIC_DisableIRQ() after CHIP wake-up in I2C_Wakeup_Slave sample code
-  * \li Add PWM_EnableLoadMode() and PWM_DisableLoadMode() functions to PWM driver
-  * \li Add PWM_SetBrakePinSource() function to PWM driver
-  * \li Add CLK_GetPCLKFreq() function to CLK driver
-  * \li Add new macro PWM_SET_DEADZONE_CLK_SRC() to PWM driver
-  * \li Add new macro SYS_IS_LVR_RST() to SYS driver.
-  * \li Add non-blocking printf implementation and use predefine compiler option to enable/disable it.
-  *
-  * <b>Revision 3.00.001</b>
-  * \li Updated to support new API
-*/
-
-
 
 #ifndef __NUC131_H__
 #define __NUC131_H__
@@ -132,10 +99,10 @@ typedef enum IRQn
     PWRWU_IRQn                = 28,       /*!< Power Down Wake Up Interrupt                         */
     ADC_IRQn                  = 29,       /*!< ADC Interrupt                                        */
     CKD_IRQn                  = 30,       /*!< Clock detection Interrupt                            */
-} IRQn_Type;                                            
-                                                        
-                                                        
-/*                                                      
+} IRQn_Type;
+
+
+/*
  * ==========================================================================
  * ----------- Processor and Core Peripheral Section ------------------------
  * ==========================================================================
@@ -145,6 +112,10 @@ typedef enum IRQn
 #define __MPU_PRESENT           0       /*!< armikcmu does not provide a MPU present or not       */
 #define __NVIC_PRIO_BITS        2       /*!< armikcmu Supports 2 Bits for the Priority Levels     */
 #define __Vendor_SysTickConfig  0       /*!< Set to 1 if different SysTick Config is used         */
+#define __FPU_PRESENT           0
+#ifndef __SOFTFP__
+# define __SOFTFP__             1
+#endif
 
 
 /*@}*/ /* end of group CMSIS */
@@ -2388,8 +2359,8 @@ typedef struct
     __IO uint32_t DAT_B2;
 
     /**
-     * @cond HIDDEN_SYMBOLS     
-     */    
+     * @cond HIDDEN_SYMBOLS
+     */
     __I uint32_t RESERVE0[13];
     /**
      * @endcond
@@ -2567,7 +2538,7 @@ typedef struct
     __IO uint32_t   BRPE;
 
     /**
-     * @cond HIDDEN_SYMBOLS     
+     * @cond HIDDEN_SYMBOLS
      */
     __I uint32_t    RESERVE0[1];
     /**
@@ -2577,13 +2548,13 @@ typedef struct
     __IO CAN_IF_T   IF[2];
 
     /**
-     * @cond HIDDEN_SYMBOLS     
+     * @cond HIDDEN_SYMBOLS
      */
     __I uint32_t    RESERVE1[8];
     /**
      * @endcond
      */
-    
+
 
     /**
      * CAN_TXREQ1
@@ -2614,7 +2585,7 @@ typedef struct
     __IO uint32_t   TXREQ2;
 
     /**
-     * @cond HIDDEN_SYMBOLS     
+     * @cond HIDDEN_SYMBOLS
      */
     __I uint32_t    RESERVE2[6];
     /**
@@ -2648,13 +2619,13 @@ typedef struct
     __IO uint32_t   NDAT2;
 
     /**
-     * @cond HIDDEN_SYMBOLS     
+     * @cond HIDDEN_SYMBOLS
      */
     __I uint32_t    RESERVE3[6];
     /**
      * @endcond
      */
-    
+
 
     /**
      * CAN_IPND1
@@ -2683,7 +2654,7 @@ typedef struct
     __IO uint32_t   IPND2;
 
     /**
-     * @cond HIDDEN_SYMBOLS     
+     * @cond HIDDEN_SYMBOLS
      */
     __I uint32_t    RESERVE4[6];
     /**
@@ -2799,7 +2770,7 @@ typedef struct
 #define CAN_STATUS_LEC_Pos         0                                    /*!< CAN_T::STATUS: LEC Position   */
 #define CAN_STATUS_LEC_Msk         (0x3ul << CAN_STATUS_LEC_Pos)        /*!< CAN_T::STATUS: LEC Mask       */
 
-/* CAN ERR Bit Field Definitions */                                             
+/* CAN ERR Bit Field Definitions */
 #define CAN_ERR_RP_Pos             15                                   /*!< CAN_T::ERR: RP Position       */
 #define CAN_ERR_RP_Msk             (1ul << CAN_ERR_RP_Pos)              /*!< CAN_T::ERR: RP Mask           */
 
@@ -2809,7 +2780,7 @@ typedef struct
 #define CAN_ERR_TEC_Pos            0                                    /*!< CAN_T::ERR: TEC Position      */
 #define CAN_ERR_TEC_Msk            (0xFFul << CAN_ERR_TEC_Pos)          /*!< CAN_T::ERR: TEC Mask          */
 
-/* CAN BTIME Bit Field Definitions */                                           
+/* CAN BTIME Bit Field Definitions */
 #define CAN_BTIME_TSEG2_Pos        12                                   /*!< CAN_T::BTIME: TSEG2 Position  */
 #define CAN_BTIME_TSEG2_Msk        (0x7ul << CAN_BTIME_TSEG2_Pos)       /*!< CAN_T::BTIME: TSEG2 Mask      */
 
@@ -2822,11 +2793,11 @@ typedef struct
 #define CAN_BTIME_BRP_Pos          0                                    /*!< CAN_T::BTIME: BRP Position    */
 #define CAN_BTIME_BRP_Msk          (0x3Ful << CAN_BTIME_BRP_Pos)        /*!< CAN_T::BTIME: BRP Mask        */
 
-/* CAN IIDR Bit Field Definitions */                                            
+/* CAN IIDR Bit Field Definitions */
 #define CAN_IIDR_INTID_Pos         0                                    /*!< CAN_T::IIDR: INTID Position   */
 #define CAN_IIDR_INTID_Msk         (0xFFFFul << CAN_IIDR_INTID_Pos)     /*!< CAN_T::IIDR: INTID Mask       */
 
-/* CAN TEST Bit Field Definitions */                                            
+/* CAN TEST Bit Field Definitions */
 #define CAN_TEST_RX_Pos            7                                    /*!< CAN_T::TEST: RX Position      */
 #define CAN_TEST_RX_Msk            (1ul << CAN_TEST_RX_Pos)             /*!< CAN_T::TEST: RX Mask          */
 
@@ -2842,18 +2813,18 @@ typedef struct
 #define CAN_TEST_BASIC_Pos         2                                    /*!< CAN_T::TEST: Basic Position   */
 #define CAN_TEST_BASIC_Msk         (1ul << CAN_TEST_BASIC_Pos)          /*!< CAN_T::TEST: Basic Mask       */
 
-/* CAN BPRE Bit Field Definitions */                                            
+/* CAN BPRE Bit Field Definitions */
 #define CAN_BRPE_BRPE_Pos          0                                    /*!< CAN_T::BRPE: BRPE Position    */
 #define CAN_BRPE_BRPE_Msk          (0xFul << CAN_BRPE_BRPE_Pos)         /*!< CAN_T::BRPE: BRPE Mask        */
 
-/* CAN IFn_CREQ Bit Field Definitions */                                        
+/* CAN IFn_CREQ Bit Field Definitions */
 #define CAN_IF_CREQ_BUSY_Pos       15                                   /*!< CAN_T::IFnCREQ: BUSY Position */
 #define CAN_IF_CREQ_BUSY_Msk       (1ul << CAN_IF_CREQ_BUSY_Pos)        /*!< CAN_T::IFnCREQ: BUSY Mask     */
 
 #define CAN_IF_CREQ_MSGNUM_Pos     0                                    /*!< CAN_T::IFnCREQ: MSGNUM Position */
 #define CAN_IF_CREQ_MSGNUM_Msk     (0x3Ful << CAN_IF_CREQ_MSGNUM_Pos)   /*!< CAN_T::IFnCREQ: MSGNUM Mask     */
 
-/* CAN IFn_CMASK Bit Field Definitions */                                      
+/* CAN IFn_CMASK Bit Field Definitions */
 #define CAN_IF_CMASK_WRRD_Pos      7                                    /*!< CAN_T::IFnCMASK: WRRD Position */
 #define CAN_IF_CMASK_WRRD_Msk      (1ul << CAN_IF_CMASK_WRRD_Pos)       /*!< CAN_T::IFnCMASK: WRRD Mask     */
 
@@ -2878,11 +2849,11 @@ typedef struct
 #define CAN_IF_CMASK_DATAB_Pos     0                                    /*!< CAN_T::IFnCMASK: DATAB Position */
 #define CAN_IF_CMASK_DATAB_Msk     (1ul << CAN_IF_CMASK_DATAB_Pos)      /*!< CAN_T::IFnCMASK: DATAB Mask     */
 
-/* CAN IFn_MASK1 Bit Field Definitions */                                       
+/* CAN IFn_MASK1 Bit Field Definitions */
 #define CAN_IF_MASK1_MSK_Pos       0                                    /*!< CAN_T::IFnMASK1: MSK Position   */
 #define CAN_IF_MASK1_MSK_Msk       (0xFFul << CAN_IF_MASK1_MSK_Pos)     /*!< CAN_T::IFnMASK1: MSK Mask       */
 
-/* CAN IFn_MASK2 Bit Field Definitions */                                       
+/* CAN IFn_MASK2 Bit Field Definitions */
 #define CAN_IF_MASK2_MXTD_Pos      15                                   /*!< CAN_T::IFnMASK2: MXTD Position */
 #define CAN_IF_MASK2_MXTD_Msk      (1ul << CAN_IF_MASK2_MXTD_Pos)       /*!< CAN_T::IFnMASK2: MXTD Mask     */
 
@@ -2892,11 +2863,11 @@ typedef struct
 #define CAN_IF_MASK2_MSK_Pos       0                                    /*!< CAN_T::IFnMASK2: MSK Position */
 #define CAN_IF_MASK2_MSK_Msk       (0x1FFul << CAN_IF_MASK2_MSK_Pos)    /*!< CAN_T::IFnMASK2: MSK Mask     */
 
-/* CAN IFn_ARB1 Bit Field Definitions */                                        
+/* CAN IFn_ARB1 Bit Field Definitions */
 #define CAN_IF_ARB1_ID_Pos         0                                    /*!< CAN_T::IFnARB1: ID Position   */
 #define CAN_IF_ARB1_ID_Msk         (0xFFFFul << CAN_IF_ARB1_ID_Pos)     /*!< CAN_T::IFnARB1: ID Mask       */
 
-/* CAN IFn_ARB2 Bit Field Definitions */                                        
+/* CAN IFn_ARB2 Bit Field Definitions */
 #define CAN_IF_ARB2_MSGVAL_Pos     15                                   /*!< CAN_T::IFnARB2: MSGVAL Position */
 #define CAN_IF_ARB2_MSGVAL_Msk     (1ul << CAN_IF_ARB2_MSGVAL_Pos)      /*!< CAN_T::IFnARB2: MSGVAL Mask     */
 
@@ -2909,7 +2880,7 @@ typedef struct
 #define CAN_IF_ARB2_ID_Pos         0                                    /*!< CAN_T::IFnARB2: ID Position     */
 #define CAN_IF_ARB2_ID_Msk         (0x1FFFul << CAN_IF_ARB2_ID_Pos)     /*!< CAN_T::IFnARB2: ID Mask         */
 
-/* CAN IFn_MCON Bit Field Definitions */                                        
+/* CAN IFn_MCON Bit Field Definitions */
 #define CAN_IF_MCON_NEWDAT_Pos     15                                   /*!< CAN_T::IFnMCON: NEWDAT Position */
 #define CAN_IF_MCON_NEWDAT_Msk     (1ul << CAN_IF_MCON_NEWDAT_Pos)      /*!< CAN_T::IFnMCON: NEWDAT Mask     */
 
@@ -2940,28 +2911,28 @@ typedef struct
 #define CAN_IF_MCON_DLC_Pos        0                                    /*!< CAN_T::IFnMCON: DLC Position    */
 #define CAN_IF_MCON_DLC_Msk        (0xFul << CAN_IF_MCON_DLC_Pos)       /*!< CAN_T::IFnMCON: DLC Mask        */
 
-/* CAN IFn_DATA_A1 Bit Field Definitions */                                     
+/* CAN IFn_DATA_A1 Bit Field Definitions */
 #define CAN_IF_DAT_A1_DATA1_Pos    8                                    /*!< CAN_T::IFnDATAA1: DATA1 Position */
 #define CAN_IF_DAT_A1_DATA1_Msk    (0xFFul << CAN_IF_DAT_A1_DATA1_Pos)  /*!< CAN_T::IFnDATAA1: DATA1 Mask     */
 
 #define CAN_IF_DAT_A1_DATA0_Pos    0                                    /*!< CAN_T::IFnDATAA1: DATA0 Position */
 #define CAN_IF_DAT_A1_DATA0_Msk    (0xFFul << CAN_IF_DAT_A1_DATA0_Pos)  /*!< CAN_T::IFnDATAA1: DATA0 Mask     */
 
-/* CAN IFn_DATA_A2 Bit Field Definitions */                                     
+/* CAN IFn_DATA_A2 Bit Field Definitions */
 #define CAN_IF_DAT_A2_DATA3_Pos    8                                    /*!< CAN_T::IFnDATAA1: DATA3 Position */
 #define CAN_IF_DAT_A2_DATA3_Msk    (0xFFul << CAN_IF_DAT_A2_DATA3_Pos)  /*!< CAN_T::IFnDATAA1: DATA3 Mask     */
 
 #define CAN_IF_DAT_A2_DATA2_Pos    0                                    /*!< CAN_T::IFnDATAA1: DATA2 Position */
 #define CAN_IF_DAT_A2_DATA2_Msk    (0xFFul << CAN_IF_DAT_A2_DATA2_Pos)  /*!< CAN_T::IFnDATAA1: DATA2 Mask     */
 
-/* CAN IFn_DATA_B1 Bit Field Definitions */                                     
+/* CAN IFn_DATA_B1 Bit Field Definitions */
 #define CAN_IF_DAT_B1_DATA5_Pos    8                                    /*!< CAN_T::IFnDATAB1: DATA5 Position */
 #define CAN_IF_DAT_B1_DATA5_Msk    (0xFFul << CAN_IF_DAT_B1_DATA5_Pos)  /*!< CAN_T::IFnDATAB1: DATA5 Mask */
 
 #define CAN_IF_DAT_B1_DATA4_Pos    0                                    /*!< CAN_T::IFnDATAB1: DATA4 Position */
 #define CAN_IF_DAT_B1_DATA4_Msk    (0xFFul << CAN_IF_DAT_B1_DATA4_Pos)  /*!< CAN_T::IFnDATAB1: DATA4 Mask */
 
-/* CAN IFn_DATA_B2 Bit Field Definitions */                                     
+/* CAN IFn_DATA_B2 Bit Field Definitions */
 #define CAN_IF_DAT_B2_DATA7_Pos    8                                    /*!< CAN_T::IFnDATAB2: DATA7 Position */
 #define CAN_IF_DAT_B2_DATA7_Msk    (0xFFul << CAN_IF_DAT_B2_DATA7_Pos)  /*!< CAN_T::IFnDATAB2: DATA7 Mask     */
 
@@ -2972,39 +2943,39 @@ typedef struct
 #define CAN_IF_TXRQST1_TXRQST_Pos  0                                        /*!< CAN_T::IFnTXRQST1: TXRQST Position */
 #define CAN_IF_TXRQST1_TXRQST_Msk  (0xFFFFul << CAN_IF_TXRQST1_TXRQST_Pos)  /*!< CAN_T::IFnTXRQST1: TXRQST Mask     */
 
-/* CAN IFn_TXRQST2 Bit Field Definitions */                                         
+/* CAN IFn_TXRQST2 Bit Field Definitions */
 #define CAN_IF_TXRQST2_TXRQST_Pos  0                                        /*!< CAN_T::IFnTXRQST2: TXRQST Position  */
 #define CAN_IF_TXRQST2_TXRQST_Msk  (0xFFFFul << CAN_IF_TXRQST2_TXRQST_Pos)  /*!< CAN_T::IFnTXRQST2: TXRQST Mask      */
 
-/* CAN IFn_NDAT1 Bit Field Definitions */                                           
+/* CAN IFn_NDAT1 Bit Field Definitions */
 #define CAN_IF_NDAT1_NEWDATA_Pos   0                                        /*!< CAN_T::IFnNDAT1: NEWDATA Position */
 #define CAN_IF_NDAT1_NEWDATA_Msk   (0xFFFFul << CAN_IF_NDAT1_NEWDATA_Pos)   /*!< CAN_T::IFnNDAT1: NEWDATA Mask     */
 
-/* CAN IFn_NDAT2 Bit Field Definitions */                                           
+/* CAN IFn_NDAT2 Bit Field Definitions */
 #define CAN_IF_NDAT2_NEWDATA_Pos   0                                        /*!< CAN_T::IFnNDAT2: NEWDATA Position */
 #define CAN_IF_NDAT2_NEWDATA_Msk   (0xFFFFul << CAN_IF_NDAT2_NEWDATA_Pos)   /*!< CAN_T::IFnNDAT2: NEWDATA Mask     */
 
-/* CAN IFn_IPND1 Bit Field Definitions */                                           
+/* CAN IFn_IPND1 Bit Field Definitions */
 #define CAN_IF_IPND1_INTPND_Pos   0                                         /*!< CAN_T::IFnIPND1: INTPND Position */
 #define CAN_IF_IPND1_INTPND_Msk   (0xFFFFul << CAN_IF_IPND1_INTPND_Pos)     /*!< CAN_T::IFnIPND1: INTPND Mask     */
 
-/* CAN IFn_IPND2 Bit Field Definitions */                                           
+/* CAN IFn_IPND2 Bit Field Definitions */
 #define CAN_IF_IPND2_INTPND_Pos   0                                         /*!< CAN_T::IFnIPND2: INTPND Position */
 #define CAN_IF_IPND2_INTPND_Msk   (0xFFFFul << CAN_IF_IPND2_INTPND_Pos)     /*!< CAN_T::IFnIPND2: INTPND Mask     */
 
-/* CAN IFn_MVLD1 Bit Field Definitions */                                           
+/* CAN IFn_MVLD1 Bit Field Definitions */
 #define CAN_IF_MVLD1_MSGVAL_Pos   0                                         /*!< CAN_T::IFnMVLD1: MSGVAL Position */
 #define CAN_IF_MVLD1_MSGVAL_Msk   (0xFFFFul << CAN_IF_MVLD1_MSGVAL_Pos)     /*!< CAN_T::IFnMVLD1: MSGVAL Mask     */
 
-/* CAN IFn_MVLD2 Bit Field Definitions */                                           
+/* CAN IFn_MVLD2 Bit Field Definitions */
 #define CAN_IF_MVLD2_MSGVAL_Pos   0                                         /*!< CAN_T::IFnMVLD2: MSGVAL Position */
 #define CAN_IF_MVLD2_MSGVAL_Msk   (0xFFFFul << CAN_IF_MVLD2_MSGVAL_Pos)     /*!< CAN_T::IFnMVLD2: MSGVAL Mask     */
 
-/* CAN WUEN Bit Field Definitions */                                                
+/* CAN WUEN Bit Field Definitions */
 #define CAN_WUEN_WAKUP_EN_Pos     0                                         /*!< CAN_T::WUEN: WAKUP_EN Position */
 #define CAN_WUEN_WAKUP_EN_Msk    (1ul << CAN_WUEN_WAKUP_EN_Pos)             /*!< CAN_T::WUEN: WAKUP_EN Mask     */
 
-/* CAN WUSTATUS Bit Field Definitions */                                           
+/* CAN WUSTATUS Bit Field Definitions */
 #define CAN_WUSTATUS_WAKUP_STS_Pos     0                                    /*!< CAN_T::WUSTATUS: WAKUP_STS Position */
 #define CAN_WUSTATUS_WAKUP_STS_Msk    (1ul << CAN_WUSTATUS_WAKUP_STS_Pos)   /*!< CAN_T::WUSTATUS: WAKUP_STS Mask     */
 /*@}*/ /* end of group CAN_CONST */
@@ -3143,7 +3114,7 @@ typedef struct
      * |        |          |1 = UART2 clock Enabled.
      * |[24]    |CAN0_EN   |CAN Bus Controller-0 Clock Enable Control
      * |        |          |0 = CAN0 clock Disabled.
-     * |        |          |1 = CAN0 clock Enable.     
+     * |        |          |1 = CAN0 clock Enable.
      * |[28]    |ADC_EN    |Analog-Digital-Converter (ADC) Clock Enable Control
      * |        |          |0 = ADC clock Disabled.
      * |        |          |1 = ADC clock Enabled.
@@ -3699,7 +3670,7 @@ typedef struct
 
 #define CLK_CLKDCTL_HXTFIEN_Pos           5                                           /*!< CLK_T::CLKDCTL: HXTFIEN Position */
 #define CLK_CLKDCTL_HXTFIEN_Msk           (1ul << CLK_CLKDCTL_HXTFIEN_Pos)            /*!< CLK_T::CLKDCTL: HXTFIEN Mask */
-                                                                                    
+
 #define CLK_CLKDCTL_HXTFDEN_Pos           4                                           /*!< CLK_T::CLKDCTL: HXTFDEN Position */
 #define CLK_CLKDCTL_HXTFDEN_Msk           (1ul << CLK_CLKDCTL_HXTFDEN_Pos)            /*!< CLK_T::CLKDCTL: HXTFDEN Mask */
 
@@ -3740,14 +3711,14 @@ typedef struct
      * | :----: | :----:   | :---- |
      * |[0]     |ISPEN     |ISP Enable (Write Protect)
      * |        |          |ISP function enable bit. Set this bit to enable ISP function.
-     * |        |          |0 = ISP function Disabled.     
+     * |        |          |0 = ISP function Disabled.
      * |        |          |1 = ISP function Enabled.
      * |[1]     |BS        |Boot Select (Write Protect)
      * |        |          |Set/clear this bit to select next booting from LDROM/APROM,
      * |        |          |respectively. This bit also functions as MCU booting status flag, which can be used to check where
      * |        |          |MCU booted from. This bit is initiated with the inverted value of CBS in Config0 after power-
      * |        |          |on reset; It keeps the same value at other reset.
-     * |        |          |0 = boot from APROM     
+     * |        |          |0 = boot from APROM
      * |        |          |1 = boot from LDROM
      * |[3]     |APUEN     |APROM Update Enable Bit (Write Protect)
      * |        |          |0 = APROM cannot be updated when the chip runs in APROM.
@@ -3755,12 +3726,12 @@ typedef struct
      * |[4]     |CFGUEN    |Config Update Enable (Write Protect)
      * |        |          |Writing this bit to 1 enables s/w to update Config value by ISP procedure regardless of program
      * |        |          |code is running in APROM or LDROM.
-     * |        |          |0 = Config update disable     
+     * |        |          |0 = Config update disable
      * |        |          |1 = Config update enable
      * |[5]     |LDUEN     |LDROM Update Enable (Write Protect)
      * |        |          |LDROM update enable bit.
      * |        |          |0 = LDROM cannot be updated
-     * |        |          |1 = LDROM can be updated when chip runs in APROM.     
+     * |        |          |1 = LDROM can be updated when chip runs in APROM.
      * |[6]     |ISPFF     |ISP Fail Flag (Write Protect)
      * |        |          |This bit is set by hardware when a triggered ISP meets any of the following conditions:
      * |        |          |(1) APROM writes to itself if APUEN is set to 0.
@@ -3826,7 +3797,7 @@ typedef struct
      * |        |          |Write 1 to start ISP operation and this bit will be cleared to 0 by hardware automatically when ISP
      * |        |          |operation is finish.
      * |        |          |0 = ISP operation is finished.
-     * |        |          |1 = ISP is in progress.     
+     * |        |          |1 = ISP is in progress.
      */
     __IO uint32_t ISPTRG;
 
@@ -4360,7 +4331,7 @@ typedef struct
      * |Bits    |Field     |Descriptions
      * | :----: | :----:   | :---- |
      * |[2]     |AA        |Assert Acknowledge Control
-     * |        |          |When AA = 0 prior to address or data received, a Not acknowledged (high level to I2Cn_SDA) will be returned during the acknowledge clock pulse on the I2Cn_SCL line.     
+     * |        |          |When AA = 0 prior to address or data received, a Not acknowledged (high level to I2Cn_SDA) will be returned during the acknowledge clock pulse on the I2Cn_SCL line.
      * |        |          |When AA = 1 prior to address or data received, an acknowledged (low level to I2Cn_SDA) will be returned during the acknowledge clock pulse on the I2Cn_SCL line when 1.) A slave is acknowledging the address sent from master, 2.) The receiver devices are acknowledging the data sent by transmitter.
      * |[3]     |SI        |I2C Interrupt Flag
      * |        |          |When a new I2C state is present in the I2CSTATUS register, the SI flag is set by hardware, and if bit EI (I2CON [7]) is set, the I2C interrupt is requested.
@@ -7965,7 +7936,7 @@ typedef struct
      * |        |          |1 = UART2 controller reset.
      * |[24]    |CAN0_RST  |CAN0 Controller Reset
      * |        |          |0 = CAN0 controller normal operation.
-     * |        |          |1 = CAN0 controller reset.     
+     * |        |          |1 = CAN0 controller reset.
      * |[28]    |ADC_RST   |ADC Controller Reset
      * |        |          |0 = ADC controller normal operation.
      * |        |          |1 = ADC controller reset.
@@ -9799,7 +9770,7 @@ typedef struct
      * |        |          |1 = RTS signal is inactive.
      * |        |          |Note1: This RTS signal control bit is not effective when RTS auto-flow control is enabled in UART function mode.
      * |        |          |Note2: This RTS signal control bit is not effective when RS-485 auto direction mode (AUD) is enabled in RS-485 function mode.
-     * |[9]     |LEV_RTS   |RTS Pin Active Level 
+     * |[9]     |LEV_RTS   |RTS Pin Active Level
      * |        |          |This bit defines the active level state of RTS pin output.
      * |        |          |0 = RTS pin output is high level active.
      * |        |          |1 = RTS pin output is low level active.
@@ -9822,7 +9793,7 @@ typedef struct
      * |        |          |0 = CTS input has not change state.
      * |        |          |1 = CTS input has change state.
      * |        |          |Note: This bit is read only, but can be cleared by writing "1" to it.
-     * |[4]     |CTS_ST    |CTS Pin Status (Read Only) 
+     * |[4]     |CTS_ST    |CTS Pin Status (Read Only)
      * |        |          |This bit mirror from CTS pin input of voltage logic status.
      * |        |          |0 = CTS pin input is low level voltage logic state.
      * |        |          |1 = CTS pin input is high level voltage logic state.
@@ -10091,7 +10062,7 @@ typedef struct
      * |        |          |The baud rate divider M = X+1.
      * |[28]    |DIV_X_ONE |Divider X Equal To 1
      * |        |          |0 = Divider M = X (the equation of M = X+1, but DIVIDER_X[27:24] must >= 8).
-     * |        |          |1 = Divider M = 1 (the equation of M = 1, but BRD [15:0] must >= 3).  
+     * |        |          |1 = Divider M = 1 (the equation of M = 1, but BRD [15:0] must >= 3).
      * |[29]    |DIV_X_EN  |Divider X Enable
      * |        |          |The BRD = Baud Rate Divider, and the baud rate equation is
      * |        |          |Baud Rate = Clock / [M * (BRD + 2)]; The default value of M is 16.
@@ -10104,7 +10075,7 @@ typedef struct
     /**
      * UA_IRCR
      * ===================================================================================================
-     * Offset: 0x28  UART IrDA Control Register 
+     * Offset: 0x28  UART IrDA Control Register
      * ---------------------------------------------------------------------------------------------------
      * |Bits    |Field     |Descriptions
      * | :----: | :----:   | :---- |
@@ -11311,4 +11282,3 @@ typedef volatile unsigned long  vu32;       ///< Define 32-bit unsigned volatile
 
 
 /*** (C) COPYRIGHT 2014 Nuvoton Technology Corp. ***/
-
