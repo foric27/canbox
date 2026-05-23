@@ -1,0 +1,41 @@
+# Build artifacts — platform-specific object files
+*.vo
+*.vwo
+*.qemu
+*.stm32f1
+*.o
+
+# Build artifacts — linker outputs
+*.elf
+*.map
+*.d
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Qt build artifacts
+qt/Makefile
+qt/release/
+qt/debug/
+qt/*.o
+qt/moc_*.cpp
+qt/ui_*.h
+qt/qrc_*.cpp
+
+# KiCad auto-generated files
+fp-info-cache
+*-cache.lib
+sym-lib-table
+
+# OpenCode/Sisyphus
+.omo/
+.sisyphus/

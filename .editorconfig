@@ -1,0 +1,69 @@
+# EditorConfig for canbox project
+# https://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C source and headers — tabs, K&R style
+[*.{c,h}]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+
+# C++ / Qt sources — tabs (consistent with C convention)
+[*.{cpp,hpp}]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+
+# Assembly — tabs
+[*.{S,s}]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+
+# Makefiles — tabs (required by GNU Make)
+[{Makefile,Makefile_*,Makefile.include}]
+indent_style = tab
+indent_size = 4
+
+# Linker scripts
+[*.ld]
+indent_style = tab
+indent_size = 4
+
+# OpenOCD configs
+[*.cfg]
+indent_style = space
+indent_size = 4
+
+# Qt project files
+[*.{pro,pri}]
+indent_style = space
+indent_size = 4
+
+# Qt UI files (XML)
+[*.ui]
+indent_style = space
+indent_size = 4
+
+# Markdown / documentation
+[*.{md,txt}]
+indent_style = space
+indent_size = 2
+
+# Diff/patch files
+[*.diff]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+# Resource files
+[*.{qrc,svg,json}]
+indent_style = space
+indent_size = 2

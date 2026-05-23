@@ -3,7 +3,9 @@ CC=$(PREFIX)-gcc
 OBJCOPY=$(PREFIX)-objcopy
 AR=$(PREFIX)-ar
 
-COMMON_INCLUDES=-I.
+COMMON_INCLUDES=-Iinclude -I.
+
+VPATH = src
 COMMON_CFLAGS=-Os -std=gnu99 -fno-common -ffunction-sections -fdata-sections -Wstrict-prototypes -Wundef -Wextra -Wshadow -Wredundant-decls #-Waddress-of-packed-member
 COMMON_LDFLAGS=--static -lc -lm -Wl,--cref -Wl,--gc-sections #-Wl,--print-gc-sections
 

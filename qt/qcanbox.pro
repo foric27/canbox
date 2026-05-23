@@ -7,10 +7,10 @@ HEADERS = main.h wdg_dbg.h wdg_com.h
 SOURCES = main.cpp wdg_dbg.cpp wdg_com.cpp
 FORMS += ui/main.ui ui/dbg.ui ui/com.ui
 
-DEPENDPATH += $$PWD/../
-INCLUDEPATH += $$PWD/../
-HEADERS += $$PWD/../canbox.h $$PWD/../car.h $$PWD/../conf.h
-SOURCES += $$PWD/../canbox.c $$PWD/../car.c qcar.c
+DEPENDPATH += $$PWD/../ $$PWD/../src
+INCLUDEPATH += $$PWD/../include $$PWD/../
+HEADERS += $$PWD/../include/canbox.h $$PWD/../include/car.h $$PWD/../include/conf.h
+SOURCES += $$PWD/../src/canbox.c $$PWD/../src/car.c qcar.c
 
 RESOURCES += qcanbox.qrc
 
