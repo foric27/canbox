@@ -11,6 +11,7 @@ canbox/
 ├── src/*.c                # Shared firmware core (8 .c files)
 ├── include/*.h            # Shared firmware headers (10 .h files)
 ├── cars/*.c               # Per-car CAN message handlers (included into car.c)
+├── canbox_protos/*.c      # Per-protocol Android handlers (included into canbox.c)
 ├── volvo_od2/
 │   ├── fw/hw_*.c          # STM32F103 hardware layer
 │   └── hw/                # KiCad PCB/schematics
@@ -31,7 +32,7 @@ canbox/
 | Task | Location | Notes |
 |------|----------|-------|
 | Main loop / timer dispatch | `src/main.c` | 1ms, 5ms, 100ms, 250ms, 1000ms timer domains |
-| CAN message → Android protocol | `src/canbox.c` | Raise VW(PQ/MQB), Oudi BMW, HiWorld protocols |
+| CAN message → Android protocol | `src/canbox.c` + `canbox_protos/*.c` | Raise VW(PQ/MQB), Oudi BMW, HiWorld protocols |
 | CAN packet parsing (per car) | `cars/*.c` | Included into `src/car.c` via `#include` |
 | Configuration read/write | `src/conf.c` | Flash-based, wear-leveling via ring buffer |
 | Hardware abstraction API | `include/hw.h`, `include/hw_can.h`, `include/hw_usart.h`, … | Headers in `include/` |
@@ -139,7 +140,7 @@ cd qt && qmake qcanbox.pro && make     # → qt/release/qcanbox(.exe)
 - Same `src/` `.c` files compiled 3× for different MCUs; platform diff via per-target `hw_*.c` inclusion
 - `hw_*.h` headers in `include/`, but implementations in `{target}/fw/` (split HAL pattern)
 - `hw_gpio.h` is NOT in `include/` (unlike other `hw_*.h`) — lives only in each target's `fw/`
-- `cars/*.c` are NOT compiled separately — they're `#include`-d into `src/car.c`
+- `cars/*.c` and `canbox_protos/*.c` are NOT compiled separately — they're `#include`-d into `src/car.c` and `src/canbox.c`
 - NUC131 startup object (`startup_NUC131.o`) is prebuilt, not compiled from source
 - `flash_volvo_od2` does chip RDP unlock before programming (3-stage: unlock → erase → program)
 - Firmware binaries (`*.bin`) and `qt/win32/qcanbox.exe` are committed to git
