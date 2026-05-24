@@ -1,7 +1,7 @@
 # qt/ — Desktop Emulator (qcanbox)
 
 ## OVERVIEW
-Qt/C++ desktop application that emulates the CAN box firmware. Links same `canbox.c` + `car.c` sources, stubs hardware functions, provides GUI for manual testing.
+Qt/C++ desktop application that emulates the CAN box firmware. Links same `src/canbox.c` + `src/car.c` sources, stubs hardware functions, provides GUI for manual testing.
 
 ## STRUCTURE
 ```
@@ -39,11 +39,12 @@ qt/
   - `hw_usart_get()` → returns `NULL`
   - `hw_can_get_mscan()` → returns `NULL`
   - `hw_usart_write()` → delegates to `main_t::usart_write()` → emits Qt signal
-  - Module boundary: Qt `.pro` file links against `canbox.c` and `car.c` from root
+  - Module boundary: Qt `.pro` file links against `src/canbox.c` and `src/car.c` from `../`
 - Build: Qt 5/6, modules: `core gui widgets serialport`
 - Windows: static link via `-static -static-libgcc`, stripped via `post_link`
 - Car state: controlled by GUI buttons, read via `qcar_state[]` array
 - Timer: Qt `QTimer` drives `car_process(1)` + `canbox_process()` every 500ms
+  - **Отличается от прошивки:** firmware вызывает `car_process(5)` каждые 5 мс и `canbox_process()` каждые 250 мс. Qt эмулятор намеренно замедлен — не real-time, для ручного тестирования протокола.
 
 ## ANTI-PATTERNS
 - **DO NOT** add code that requires actual hardware — Qt emulator is for protocol testing only

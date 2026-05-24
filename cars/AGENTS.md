@@ -1,7 +1,7 @@
 # cars/ — Car-Specific CAN Message Handlers
 
 ## OVERVIEW
-Per-car `.c` files defining CAN message filter tables and parsing callbacks. Included into `car.c` via `#include`, NOT compiled separately.
+Per-car `.c` files defining CAN message filter tables and parsing callbacks. Included into `src/car.c` via `#include`, NOT compiled separately.
 
 ## STRUCTURE
 ```
@@ -18,7 +18,7 @@ cars/
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
-| Add new car | Create `cars/newcar.c` + add `#define USE_*` in `car.c` | Follow existing car file pattern |
+| Add new car | Create `cars/newcar.c` + add `#define USE_*` in `src/car.c` | Follow existing car file pattern |
 | Add CAN message to existing car | Edit handler table in `cars/lr2_2007my.c` etc. | `msg_desc_t` array: id, timeout_ms, period?, 0, handler |
 | Understand CAN IDs for a car | Read comment blocks above handler tables | Each car file self-documents its CAN messages |
 | Debug car data | Use interactive debug mode (`10 × 'O'` on USART) | Shows live `carstate` values |
@@ -28,10 +28,10 @@ cars/
 - Array name convention: `{carname}_ms[]`
 - Handler name convention: `{carname}_ms_{id:x}_handler(const uint8_t * msg, struct msg_desc_t * desc)`
 - All handlers and arrays are `static` (file-local, no collisions when #included together)
-- Handlers write directly to global `carstate` struct (defined in `car.c`)
+- Handlers write directly to global `carstate` struct (defined in `src/car.c`)
 - Timeout logic: `if (is_timeout(desc)) { carstate.field = STATE_UNDEF; return; }`
 - Bit extraction: raw `msg[N]` indexing with hex masks (`msg[2] & 0x80`)
-- Scaling: `scale(value, in_min, in_max, out_min, out_max)` — defined in `car.c`
+- Scaling: `scale(value, in_min, in_max, out_min, out_max)` — defined in `src/car.c`
 - No `#include` of other car files — each file is self-contained
 - All symbols must be `static` — car files are `#include`d in same translation unit
 

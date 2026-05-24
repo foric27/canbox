@@ -23,13 +23,14 @@ CAN-адаптер — устройство, сопрягающее головн
 
 | Адаптер | MCU | Ядро | Протокол |
 |---------|-----|------|----------|
-| OD-Volvo-02 | STM32F103x8 | Cortex-M3 | Raise VW(PQ/MQB), Oudi BMW NBT Evo, HiWorld VW(MQB) |
+| OD-Volvo-02 | STM32F103x8 | Cortex-M3 | Raise VW(PQ/MQB), Oudi BMW(NBT), HiWorld VW(MQB) |
 | VW-NC03 | Nuvoton NUC131 | Cortex-M0 | CAN-кадры через аппаратный CAN-контроллер |
 
 ## Поддерживаемые автомобили
 
 | Модель | CAN-шина |
 |--------|----------|
+| AnyMsg (универсальный режим) | — |
 | Land Rover Freelander 2 (2007 MY) | HS-CAN 500 кбит/с |
 | Land Rover Freelander 2 (2013 MY) | HS-CAN 500 кбит/с |
 | Volvo XC90 (2007 MY) | HS-CAN 500 кбит/с |
@@ -49,7 +50,7 @@ CAN-адаптер — устройство, сопрягающее головн
 |---------|----------|
 | `OOOOOOOOOOOOO` | вход в режим отладки |
 | `o` | выход в нормальный режим |
-| `b` | выбор эмулируемого протокола ГУ: Raise VW(PQ) → Raise VW(MQB) → Oudi BMW NBT Evo → HiWorld VW(MQB) |
+| `b` | выбор эмулируемого протокола ГУ: Raise VW(PQ) → Raise VW(MQB) → Oudi BMW(NBT) → HiWorld VW(MQB) |
 | `c` | выбор автомобиля: AnyMsg → LR2 2007MY → LR2 2013MY → XC90 2007MY → Skoda Fabia → Audi Q3 → Toyota Premio |
 | `I` / `i` | увеличить / уменьшить порог включения подсветки (0—100%) |
 | `D` / `d` | увеличить / уменьшить задержку отключения камеры заднего хода (0—8000 мс) |
@@ -59,33 +60,44 @@ CAN-адаптер — устройство, сопрягающее головн
 
 ## Сборка из исходников
 
-### Зависимости
+### Linux
+
 ```bash
 # ARM toolchain
 sudo apt install gcc-arm-none-eabi
 
-# libopencm3 — уже в репозитории (libopencm3/)
-
-# Патченный OpenOCD для NUC131 (опционально, для прошивки)
-# Применить openocd-fix.diff к исходникам OpenOCD, собрать, установить в /opt/openocd-nuvoton/
-
-# Патченный QEMU 7.2.0 для STM32 (опционально, для эмуляции)
-# Применить qemu-7.2.0-fix.diff, собрать, установить в /opt/qemu-stm32/
-
-# Qt-эмулятор (опционально)
-sudo apt install qt6-base-dev libqt6serialport6-dev
+# Сборка
+make                  # все три прошивки: vw_nc03.bin, volvo_od2.bin, qemu.bin
+make clean            # удаление артефактов
+make run_qemu         # сборка и запуск в QEMU
+make flash_volvo_od2  # прошивка OD-Volvo-02
+make flash_vw_nc03    # прошивка VW-NC03
 ```
 
-### Команды сборки
-```bash
-make                  # сборка всех трёх прошивок: vw_nc03.bin, volvo_od2.bin, qemu.bin
-make clean            # удаление артефактов сборки
-make run_qemu         # сборка и запуск в QEMU (stm32vldiscovery)
-make flash_volvo_od2  # прошивка OD-Volvo-02 через OpenOCD (с разблокировкой RDP)
-make flash_vw_nc03    # прошивка VW-NC03 через патченный OpenOCD
-make test_nuc         # чтение регистров NUC131 через OpenOCD
+### Windows (PowerShell)
 
-# Qt-эмулятор
+```powershell
+# ARM toolchain — xPack GNU Arm Embedded GCC
+# Скачать: https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases
+# Добавить в PATH
+
+# Сборка через build.ps1
+.\build.ps1              # все три прошивки
+.\build.ps1 clean        # удаление артефактов
+.\build.ps1 volvo_od2    # сборка только OD-Volvo-02
+.\build.ps1 vw_nc03      # сборка только VW-NC03
+.\build.ps1 qemu         # сборка только QEMU
+.\build.ps1 run_qemu     # сборка и запуск QEMU
+```
+
+> **Примечание:** `make` на Windows доступен через Git Bash, MSYS2 или chocolatey (`choco install make`). Если `make` установлен — Makefile тоже работает после настройки путей к OpenOCD/QEMU:
+> ```bash
+> make OPENOCD_NUVOTON=/c/openocd/bin/openocd OPENOCD_STM32=/c/openocd/bin/openocd
+> ```
+
+### Qt-эмулятор
+
+```bash
 cd qt && qmake qcanbox.pro && make   # сборка qcanbox
 ```
 
@@ -147,7 +159,7 @@ canbox/
 - `cars/*.c` — не компилируются отдельно, а `#include`-ятся в `car.c`
 - `conf_write()` — wear-leveling запись во flash: пишет в следующий слот, стирает страницу только при заворачивании кольцевого буфера
 - `flash_volvo_od2` — трёхстадийная разблокировка RDP чипа перед программированием
-- `startup_NUC131.o` — собирается из `startup_NUC131.S` по неявному правилу GNU Make
+- `startup_NUC131.o` — собирается из `startup_NUC131.S` (`.../NUC131/Source/GCC/`) по неявному правилу GNU Make
 - Режим отладки через ANSI escape-последовательности (`\033[2J`, `\033[H`) — псевдографический интерфейс в терминале
 - Бинарные файлы прошивок (`*.bin`) закоммичены в репозиторий для пользователей без toolchain
 

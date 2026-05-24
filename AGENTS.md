@@ -40,7 +40,7 @@ canbox/
 | Systick / timer flags | `src/tick.c` | Generates flag_1ms, flag_5ms, flag_100ms, flag_250ms, flag_1000ms |
 | Heap (malloc/sbrk) | `src/sbrk.c` | Custom `_sbrk_r`, `#ifdef STM32F1` for different linker symbols |
 | Ring buffer | `src/ring.c` | Used by USART RX/TX |
-| Canbox protocol headers | `include/canbox.h` | `canbox_process`, `canbox_park_process`, key callbacks |
+| Canbox protocol headers | `include/canbox.h` | `canbox_process`, `canbox_park_process`; `key_cb_t` in `include/car.h` |
 | Car state API | `include/car.h` | Doors, radar, illumination, selector, VIN, climate |
 | Config schema | `include/conf.h` | `e_car_t` (7 cars), `e_canbox_t` (4 protocols), `MAX_REAR_DELAY` |
 
@@ -120,12 +120,21 @@ make run_qemu                           # QEMU stm32vldiscovery (requires patche
 cd qt && qmake qcanbox.pro && make     # → qt/release/qcanbox(.exe)
 ```
 
-**Toolchain**: `arm-none-eabi-gcc` (apt: `gcc-arm-none-eabi`)
+```powershell
+# Windows (PowerShell) — не требует make
+.\build.ps1                    # сборка всех трёх прошивок
+.\build.ps1 clean              # удаление артефактов
+.\build.ps1 volvo_od2          # сборка только OD-Volvo-02
+.\build.ps1 run_qemu           # сборка и запуск в QEMU
+.\build.ps1 flash_vw_nc03      # прошивка VW-NC03 (если OpenOCD в PATH)
+```
+
+**Toolchain**: `arm-none-eabi-gcc` (apt: `gcc-arm-none-eabi`, Windows: [xPack](https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases))
 **Patched deps**: `openocd-fix.diff` (NUC131 flash), `qemu-7.2.0-fix.diff` (STM32 USART emulation)
 
 ## Non-Standard Patterns
 
-- Object file extensions: `.vwo` (NUC131), `.vo` (STM32F1), `.qemu` (QEMU) — prevents name collisions
+- Object file extensions: `.vwo` (NUC131), `.vo` (STM32F1), `.qemu` (QEMU), `.stm32f1` (libopencm3) — prevents name collisions
 - `libopencm3` is committed directly (not submodule), compiled via explicit rules in `Makefile_stm32f1`
 - Same `src/` `.c` files compiled 3× for different MCUs; platform diff via per-target `hw_*.c` inclusion
 - `hw_*.h` headers in `include/`, but implementations in `{target}/fw/` (split HAL pattern)
@@ -134,7 +143,7 @@ cd qt && qmake qcanbox.pro && make     # → qt/release/qcanbox(.exe)
 - NUC131 startup object (`startup_NUC131.o`) is prebuilt, not compiled from source
 - `flash_volvo_od2` does chip RDP unlock before programming (3-stage: unlock → erase → program)
 - Firmware binaries (`*.bin`) and `qt/win32/qcanbox.exe` are committed to git
-- `.gitignore`, `.gitattributes`, `.editorconfig` added — build artifacts excluded, LF enforced, tab style configured
+- `.gitignore`, `.gitattributes`, `.editorconfig` present — build artifacts excluded, LF enforced, tab style configured
 - No CI, no tests
 
 ## Notes
