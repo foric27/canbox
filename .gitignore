@@ -1,14 +1,16 @@
-# Build artifacts — platform-specific object files
+# Build output directory (primary)
+out/
+
+# Legacy build artifacts (safety net if build runs outside out/)
 *.vo
 *.vwo
 *.qemu
 *.stm32f1
 *.o
-
-# Build artifacts — linker outputs
 *.elf
 *.map
 *.d
+*.bin
 
 # IDE
 .vscode/
@@ -24,6 +26,9 @@ Desktop.ini
 
 # Qt build artifacts
 qt/Makefile
+qt/Makefile.Debug
+qt/Makefile.Release
+qt/.qmake.stash
 qt/release/
 qt/debug/
 qt/*.o
@@ -35,7 +40,14 @@ qt/qrc_*.cpp
 fp-info-cache
 *-cache.lib
 sym-lib-table
+*-backups/
+*.kicad_pcb-bak
+*.kicad_sch-bak
+_autosave-*
 
 # OpenCode/Sisyphus
 .omo/
 .sisyphus/
+
+# Linux KDE
+.directory
