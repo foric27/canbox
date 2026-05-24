@@ -1,18 +1,19 @@
-QEMU_OBJS = qemu/fw/hw_clock.qemu \
-		qemu/fw/hw_can.qemu \
-		qemu/fw/hw_gpio.qemu \
-		qemu/fw/hw_tick.qemu \
-		qemu/fw/hw_usart.qemu \
-		qemu/fw/hw_sleep.qemu \
-		qemu/fw/hw_conf.qemu
+QEMU_OBJS = out/qemu/fw/hw_clock.qemu \
+		out/qemu/fw/hw_can.qemu \
+		out/qemu/fw/hw_gpio.qemu \
+		out/qemu/fw/hw_tick.qemu \
+		out/qemu/fw/hw_usart.qemu \
+		out/qemu/fw/hw_sleep.qemu \
+		out/qemu/fw/hw_conf.qemu
 
-%.qemu : %.c
+out/%.qemu : %.c
+	mkdir -p $(dir $@)
 	$(CC) $(F103_CFLAGS) -c $< -o $@
 
-qemu.bin: main.qemu canbox.qemu ring.qemu conf.qemu car.qemu tick.qemu hw.qemu sbrk.qemu $(QEMU_OBJS) $(LIBOPENCM3_OBJS)
-	$(CC) $^ -L. -Tqemu/fw/stm32vldiscovery.ld -L$(LIBOPENCM3_DIR)/lib/stm32/f1 $(F103_LDFLAGS) $(F103_INCLUDES) -Wl,-Map=qemu.map -o qemu.elf
-	$(OBJCOPY) -O binary qemu.elf $@
+out/qemu.bin: out/main.qemu out/canbox.qemu out/ring.qemu out/conf.qemu out/car.qemu out/tick.qemu out/hw.qemu out/sbrk.qemu $(QEMU_OBJS) $(LIBOPENCM3_OBJS)
+	$(CC) $^ -L. -Tqemu/fw/stm32vldiscovery.ld -L$(LIBOPENCM3_DIR)/lib/stm32/f1 $(F103_LDFLAGS) $(F103_INCLUDES) -Wl,-Map=out/qemu.map -o out/qemu.elf
+	$(OBJCOPY) -O binary out/qemu.elf $@
 
-run_qemu: qemu.bin
-	reset
-	/opt/qemu-stm32/bin/qemu-system-arm -M stm32vldiscovery -kernel qemu.bin -serial stdio -display none
+run_qemu: out/qemu.bin
+	-reset 2>/dev/null || true
+	$(QEMU_STM32) -M stm32vldiscovery -kernel out/qemu.bin -serial stdio -display none
