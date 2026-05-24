@@ -1,0 +1,108 @@
+/*
+ * canbox_hiworld_vw_mqb.c — HiWorld VW(MQB) protocol
+ *
+ * Included into src/canbox.c. All symbols MUST be static.
+ * Uses snd_canbox_hiworld_msg() instead of snd_canbox_msg().
+ */
+
+static void canbox_hiworld_vw_mqb_wheel_process(void)
+{
+	int16_t wmin = -540;
+	int16_t wmax = 540;
+
+	int8_t wheel = 0;
+	if (!car_get_wheel(&wheel))
+		return;
+
+	struct radar_t radar;
+	car_get_radar(&radar);
+
+	uint8_t _park_is_on = (e_radar_on == radar.state) ? 1 : 0;
+	static uint8_t park_is_on = 0;
+
+	if (park_is_on != _park_is_on || park_is_on) {
+
+		park_is_on = _park_is_on;
+
+		int16_t sangle = scale(wheel, -100, 100, wmin, wmax);
+		uint8_t wbuf[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+		wbuf[0] = park_is_on ? 0x20 : 0x00;
+		wbuf[4] = park_is_on ? 0x03 : 0x00;
+		wbuf[6] = sangle >> 8;
+		wbuf[7] = sangle;
+		snd_canbox_hiworld_msg(0x11, wbuf, sizeof(wbuf));
+	}
+}
+
+static void canbox_hiworld_vw_mqb_radar_process(void)
+{
+	uint8_t pmax = (e_selector_r == car_get_selector()) ? 165 : 250;
+	uint8_t pstart = (e_selector_r == car_get_selector()) ? 1 : 5;
+
+	struct radar_t radar;
+	car_get_radar(&radar);
+	if (radar.state == e_radar_undef)
+		return;
+
+	uint8_t park_is_on = (e_radar_on == radar.state) ? 1 : 0;
+
+	if (park_is_on) {
+
+		uint8_t data[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+		data[0] = pmax + pstart - scale(radar.rl, 0, 99, 0, pmax);
+		data[1] = pmax + pstart - scale(radar.rlm, 0, 99, 0, pmax);
+		data[2] = pmax + pstart - scale(radar.rrm, 0, 99, 0, pmax);
+		data[3] = pmax + pstart - scale(radar.rr, 0, 99, 0, pmax);
+
+		data[4] = pmax + pstart - scale(radar.fr, 0, 99, 0, pmax);
+		data[5] = pmax + pstart - scale(radar.frm, 0, 99, 0, pmax);
+		data[6] = pmax + pstart - scale(radar.flm, 0, 99, 0, pmax);
+		data[7] = pmax + pstart - scale(radar.fl, 0, 99, 0, pmax);
+
+		snd_canbox_hiworld_msg(0x41, data, sizeof(data));
+	}
+}
+
+static void canbox_hiworld_vw_mqb_door_process(void)
+{
+	uint8_t fl_door = car_get_door_fl();
+	uint8_t fr_door = car_get_door_fr();
+	uint8_t rl_door = car_get_door_rl();
+	uint8_t rr_door = car_get_door_rr();
+	uint8_t tailgate = car_get_tailgate();
+	uint8_t bonnet = car_get_bonnet();
+
+	uint8_t state = 0;
+
+	if (bonnet)
+		state |= 0x4;
+	if (tailgate)
+		state |= 0x8;
+	if (rr_door)
+		state |= 0x10;
+	if (rl_door)
+		state |= 0x20;
+	if (fr_door)
+		state |= 0x40;
+	if (fl_door)
+		state |= 0x80;
+
+	uint8_t data[] = { 0x00, 0x00, state, 0x00, 0x00, 0x00, 0x00 };
+
+	snd_canbox_hiworld_msg(0x12, data, sizeof(data));
+}
+
+/*
+ * Entry points — called from canbox.c dispatcher
+ */
+static void canbox_hiworld_vw_mqb_process(void)
+{
+	canbox_hiworld_vw_mqb_wheel_process();
+	canbox_hiworld_vw_mqb_door_process();
+}
+
+static void canbox_hiworld_vw_mqb_park_process(void)
+{
+	canbox_hiworld_vw_mqb_radar_process();
+}
