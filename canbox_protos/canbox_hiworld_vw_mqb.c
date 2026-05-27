@@ -1,9 +1,36 @@
 /*
  * canbox_hiworld_vw_mqb.c — HiWorld VW(MQB) protocol
  *
- * Included into src/canbox.c. All symbols MUST be static.
- * Uses snd_canbox_hiworld_msg() instead of snd_canbox_msg().
+ * Fully self-contained. All symbols static except public API.
  */
+
+#include <string.h>
+
+static float scale(float value, float in_min, float in_max, float out_min, float out_max)
+{
+	return (((value - in_min) * (out_max - out_min)) / (in_max - in_min)) + out_min;
+}
+
+static uint8_t canbox_hiworld_checksum(uint8_t * buf, uint8_t len)
+{
+	uint8_t sum = 0;
+	for (uint8_t i = 0; i < len; i++)
+		sum += buf[i];
+	sum = sum - 1;
+	return sum;
+}
+
+static void snd_canbox_hiworld_msg(uint8_t type, uint8_t * msg, uint8_t size)
+{
+	uint8_t buf[5 + size];
+	buf[0] = 0x5a;
+	buf[1] = 0xa5;
+	buf[2] = size;
+	buf[3] = type;
+	memcpy(buf + 4, msg, size);
+	buf[4 + size] = canbox_hiworld_checksum(buf + 2, size + 2);
+	hw_usart_write(hw_usart_get(), buf, sizeof(buf));
+}
 
 static void canbox_hiworld_vw_mqb_wheel_process(void)
 {
@@ -21,7 +48,6 @@ static void canbox_hiworld_vw_mqb_wheel_process(void)
 	static uint8_t park_is_on = 0;
 
 	if (park_is_on != _park_is_on || park_is_on) {
-
 		park_is_on = _park_is_on;
 
 		int16_t sangle = scale(wheel, -100, 100, wmin, wmax);
@@ -47,19 +73,15 @@ static void canbox_hiworld_vw_mqb_radar_process(void)
 	uint8_t park_is_on = (e_radar_on == radar.state) ? 1 : 0;
 
 	if (park_is_on) {
-
 		uint8_t data[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-
 		data[0] = pmax + pstart - scale(radar.rl, 0, 99, 0, pmax);
 		data[1] = pmax + pstart - scale(radar.rlm, 0, 99, 0, pmax);
 		data[2] = pmax + pstart - scale(radar.rrm, 0, 99, 0, pmax);
 		data[3] = pmax + pstart - scale(radar.rr, 0, 99, 0, pmax);
-
 		data[4] = pmax + pstart - scale(radar.fr, 0, 99, 0, pmax);
 		data[5] = pmax + pstart - scale(radar.frm, 0, 99, 0, pmax);
 		data[6] = pmax + pstart - scale(radar.flm, 0, 99, 0, pmax);
 		data[7] = pmax + pstart - scale(radar.fl, 0, 99, 0, pmax);
-
 		snd_canbox_hiworld_msg(0x41, data, sizeof(data));
 	}
 }
@@ -89,12 +111,27 @@ static void canbox_hiworld_vw_mqb_door_process(void)
 		state |= 0x80;
 
 	uint8_t data[] = { 0x00, 0x00, state, 0x00, 0x00, 0x00, 0x00 };
-
 	snd_canbox_hiworld_msg(0x12, data, sizeof(data));
 }
 
 /*
- * Entry points — called from canbox.c dispatcher
+ * SWC key callbacks — empty stubs (HiWorld does not use SWC via canbox)
+ */
+void canbox_inc_volume(uint8_t val) { (void)val; }
+void canbox_dec_volume(uint8_t val) { (void)val; }
+void canbox_prev(void) { }
+void canbox_next(void) { }
+void canbox_mode(void) { }
+void canbox_cont(void) { }
+void canbox_mici(void) { }
+
+/*
+ * RX state machine — empty stub (HiWorld does not use Raise RX)
+ */
+void canbox_rx_process(uint8_t ch) { (void)ch; }
+
+/*
+ * Entry points
  */
 static void canbox_hiworld_vw_mqb_process(void)
 {

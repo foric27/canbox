@@ -4,7 +4,6 @@
 
 #include "NUC131.h"
 
-#include "conf.h"
 #include "hw_conf.h"
 //#include "hw_usart.h"
 

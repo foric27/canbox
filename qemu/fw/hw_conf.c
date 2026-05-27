@@ -3,7 +3,6 @@
 
 #include <inttypes.h>
 
-#include "conf.h"
 #include "hw_conf.h"
 
 /* sector 63 1KB */

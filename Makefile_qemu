@@ -10,7 +10,7 @@ out/%.qemu : %.c
 	mkdir -p $(dir $@)
 	$(CC) $(F103_CFLAGS) -c $< -o $@
 
-out/qemu.bin: out/main.qemu out/canbox.qemu out/ring.qemu out/conf.qemu out/car.qemu out/tick.qemu out/hw.qemu out/sbrk.qemu $(QEMU_OBJS) $(LIBOPENCM3_OBJS)
+out/qemu.bin: out/main.qemu out/canbox.qemu out/ring.qemu out/car.qemu out/tick.qemu out/hw.qemu out/sbrk.qemu $(QEMU_OBJS) $(LIBOPENCM3_OBJS)
 	$(CC) $^ -L. -Tqemu/fw/stm32vldiscovery.ld -L$(LIBOPENCM3_DIR)/lib/stm32/f1 $(F103_LDFLAGS) $(F103_INCLUDES) -Wl,-Map=out/qemu.map -o out/qemu.elf
 	$(OBJCOPY) -O binary out/qemu.elf $@
 

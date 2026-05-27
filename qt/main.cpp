@@ -9,8 +9,8 @@
 #include "main.h"
 #include "ui_main.h"
 
-#include "conf.h"
-#include "qcar.h"
+	#include "canbox.h"
+	#include "qcar.h"
 
 static main_t *g_main = NULL;
 
@@ -19,21 +19,11 @@ extern "C" {
 	void canbox_process();
 	void car_process(uint8_t);
 	void canbox_rx_process(uint8_t ch);
-	void car_init(enum e_car_t car, struct key_cb_t * cb);
+	void car_init(struct key_cb_t * cb);
 
 	uint8_t get_rear_delay_state(void)
 	{
 		return 1;
-	}
-
-	enum e_car_t conf_get_car(void)
-	{
-		return e_car_anymsg;
-	}
-
-	enum e_canbox_t conf_get_canbox(void)
-	{
-		return (e_canbox_t)g_main->m_ui->cb_canbox->currentData().value<int>();
 	}
 
 	struct usart_t * hw_usart_get(void)
@@ -104,7 +94,7 @@ main_t::main_t(QWidget *parent) : QMainWindow(parent), m_ui(new Ui::main)
 
 	init_buttons();
 
-	car_init(e_car_qcar, NULL);
+	car_init(NULL);
 
 	connect(&timer, &QTimer::timeout, this, &main_t::slt_timer, Qt::QueuedConnection);
 	timer.setSingleShot(false);

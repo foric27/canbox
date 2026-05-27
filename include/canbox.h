@@ -8,6 +8,15 @@ extern "C"
 {
 #endif
 
+enum e_canbox_t
+{
+	e_cb_raise_vw_pq = 0,
+	e_cb_raise_vw_mqb,
+	e_cb_od_bmw_nbt_evo,
+	e_cb_hiworld_vw_mqb,
+	e_cb_nums,
+};
+
 void canbox_process(void);
 
 void canbox_inc_volume(uint8_t val);
@@ -26,4 +35,3 @@ void canbox_park_process(void);
 #endif
 
 #endif
-

@@ -10,7 +10,7 @@ out/%.vo : %.c
 	mkdir -p $(dir $@)
 	$(CC) $(F103_CFLAGS) -c $< -o $@
 
-out/volvo_od2.bin: out/main.vo out/canbox.vo out/ring.vo out/conf.vo out/car.vo out/tick.vo out/hw.vo out/sbrk.vo $(VOLVO_OD2_OBJS) $(LIBOPENCM3_OBJS)
+out/volvo_od2.bin: out/main.vo out/canbox.vo out/ring.vo out/car.vo out/tick.vo out/hw.vo out/sbrk.vo $(VOLVO_OD2_OBJS) $(LIBOPENCM3_OBJS)
 	$(CC) $^ -L. -Tvolvo_od2/fw/x32f103x8.ld -L$(LIBOPENCM3_DIR)/lib/stm32/f1 $(F103_LDFLAGS) $(F103_INCLUDES) -Wl,-Map=out/volvo_od2.map -o out/volvo_od2.elf
 	$(OBJCOPY) -O binary out/volvo_od2.elf $@
 

@@ -9,7 +9,7 @@ FORMS += ui/main.ui ui/dbg.ui ui/com.ui
 
 DEPENDPATH += $$PWD/../ $$PWD/../src
 INCLUDEPATH += $$PWD/../include $$PWD/../
-HEADERS += $$PWD/../include/canbox.h $$PWD/../include/car.h $$PWD/../include/conf.h
+HEADERS += $$PWD/../include/canbox.h $$PWD/../include/car.h
 SOURCES += $$PWD/../src/canbox.c $$PWD/../src/car.c qcar.c
 
 RESOURCES += qcanbox.qrc

@@ -34,7 +34,7 @@ qt/
 | Prebuilt binary | `win32/qcanbox.exe` | Committed to git |
 
 ## CONVENTIONS
-- **Defines `QCAR`** macro — adds `e_car_qcar` to `e_car_t` enum in `conf.h`
+- **Defines `QCAR`** macro — adds `e_car_qcar` to `e_car_t` enum in `car.h`
 - All `hw_*` functions are **stubbed** in `main.cpp` `extern "C"` block:
   - `hw_usart_get()` → returns `NULL`
   - `hw_can_get_mscan()` → returns `NULL`

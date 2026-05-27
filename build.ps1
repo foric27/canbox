@@ -56,7 +56,7 @@ $NUC131_LDFLAGS = $NUC131_ARCH + $COMMON_LDFLAGS + "-L.", "-Wl,--allow-multiple-
 
 # Core source files (shared across all targets)
 $CORE_SOURCES = @(
-    "src/main.c", "src/canbox.c", "src/ring.c", "src/conf.c",
+    "src/main.c", "src/canbox.c", "src/ring.c",
     "src/car.c", "src/tick.c", "src/hw.c", "src/sbrk.c"
 )
 

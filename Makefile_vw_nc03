@@ -30,7 +30,7 @@ VW_NC03_OBJS = out/vw_nc03/fw/hw_clock.vwo \
 		out/vw_nc03/fw/hw_sleep.vwo \
 		out/vw_nc03/fw/hw_conf.vwo
 
-out/vw_nc03.bin: out/main.vwo out/canbox.vwo out/ring.vwo out/conf.vwo out/car.vwo out/tick.vwo out/hw.vwo out/sbrk.vwo $(VW_NC03_OBJS) $(NUC131_BSP_OBJS)
+out/vw_nc03.bin: out/main.vwo out/canbox.vwo out/ring.vwo out/car.vwo out/tick.vwo out/hw.vwo out/sbrk.vwo $(VW_NC03_OBJS) $(NUC131_BSP_OBJS)
 	$(CC) $^ -L. -T$(NUC131_BSP_DIR)/Library/Device/Nuvoton/NUC131/Source/GCC/gcc_arm.ld $(NUC131_LDFLAGS) $(NUC131_INCLUDES) -Wl,-Map=out/vw_nc03.map -o out/vw_nc03.elf
 	$(OBJCOPY) -O binary out/vw_nc03.elf $@
 

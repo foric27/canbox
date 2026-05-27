@@ -8,7 +8,7 @@ STM32F103x8 (Cortex-M3) + Nuvoton NUC131 (Cortex-M0). Desktop emulator via Qt.
 
 ```
 canbox/
-├── src/*.c                # Shared firmware core (8 .c files)
+├── src/*.c                # Shared firmware core (7 .c files)
 ├── include/*.h            # Shared firmware headers (10 .h files)
 ├── cars/*.c               # Per-car CAN message handlers (included into car.c)
 ├── canbox_protos/*.c      # Per-protocol Android handlers (included into canbox.c)
@@ -25,7 +25,7 @@ canbox/
 └── Makefile*              # Build: root + 4 variant Makefiles
 ```
 
-**Architecture**: Shared core (`src/main.c`, `src/canbox.c`, `src/car.c`, `src/conf.c`, `src/hw.c`, `src/ring.c`, `src/tick.c`, `src/sbrk.c`) compiled 3× for different platforms. Platform differentiation via `hw_*.c` implementations in each target's `fw/` directory. Headers in `include/`.
+**Architecture**: Shared core (`src/main.c`, `src/canbox.c`, `src/car.c`, `src/hw.c`, `src/ring.c`, `src/tick.c`, `src/sbrk.c`) compiled 3× for different platforms. Platform differentiation via `hw_*.c` implementations in each target's `fw/` directory. Headers in `include/`.
 
 ## Where to Look
 
@@ -34,34 +34,33 @@ canbox/
 | Main loop / timer dispatch | `src/main.c` | 1ms, 5ms, 100ms, 250ms, 1000ms timer domains |
 | CAN message → Android protocol | `src/canbox.c` + `canbox_protos/*.c` | Raise VW(PQ/MQB), Oudi BMW, HiWorld protocols |
 | CAN packet parsing (per car) | `cars/*.c` | Included into `src/car.c` via `#include` |
-| Configuration read/write | `src/conf.c` | Flash-based, wear-leveling via ring buffer |
+| Compile-time configuration | `include/config.h` | Select car, protocol, illum threshold, rear delay |
 | Hardware abstraction API | `include/hw.h`, `include/hw_can.h`, `include/hw_usart.h`, … | Headers in `include/` |
 | Platform-specific HAL impl | `{target}/fw/hw_*.c` | STM32F1: libopencm3, NUC131: BSP, QEMU: stubs |
-| Qt emulator entry | `qt/main.cpp` | Stubs `hw_usart_get`, `conf_get_car`, `hw_can_*` |
+| Qt emulator entry | `qt/main.cpp` | Stubs `hw_usart_get`, `hw_can_*`, `car_init` |
 | Systick / timer flags | `src/tick.c` | Generates flag_1ms, flag_5ms, flag_100ms, flag_250ms, flag_1000ms |
 | Heap (malloc/sbrk) | `src/sbrk.c` | Custom `_sbrk_r`, `#ifdef STM32F1` for different linker symbols |
 | Ring buffer | `src/ring.c` | Used by USART RX/TX |
-| Canbox protocol headers | `include/canbox.h` | `canbox_process`, `canbox_park_process`; `key_cb_t` in `include/car.h` |
-| Car state API | `include/car.h` | Doors, radar, illumination, selector, VIN, climate |
-| Config schema | `include/conf.h` | `e_car_t` (7 cars), `e_canbox_t` (4 protocols), `MAX_REAR_DELAY` |
+| Canbox protocol headers | `include/canbox.h` | `canbox_process`, `canbox_park_process`; `e_canbox_t` enum |
+| Car state API | `include/car.h` | Doors, radar, illumination, selector, VIN, climate; `e_car_t` enum |
+| Compile-time config | `include/config.h` | `CONFIG_CAR_*`, `USE_*` protocol, `CONFIG_ILLUM`, `CONFIG_REAR_DELAY` |
 
 ## Code Map
 
 | Symbol | Type | Location | Role |
 |--------|------|----------|------|
-| `main()` | function | `src/main.c:454` | Entry: hw_setup → conf_read → car_init → main loop |
-| `carstate` | struct | `src/car.c:58` | Global car state (doors, speed, radar, climate…) |
+| `main()` | function | `src/main.c:88` | Entry: hw_setup → car_init → main loop |
+| `carstate` | struct | `src/car.c:73` | Global car state (doors, speed, radar, climate…) |
 | `timer` | volatile struct | `src/tick.c:3` | Timer flags: flag_tick, flag_5ms, flag_100ms, flag_250ms, flag_1000ms |
-| `conf` | struct | `src/conf.c:35` | Flash-stored config (car, canbox, illum, rear_delay) |
-| `car_init()` | function | `src/car.c` | Selects car handler, registers CAN messages from `cars/*.c` |
-| `car_process(ms)` | function | `src/car.c` | Dispatches CAN messages with timeout tracking |
+| `car_init()` | function | `src/car.c:273` | Sets compile-time car, CAN speed, registers handlers |
+| `car_process(ms)` | function | `src/car.c:317` | Dispatches CAN messages with timeout tracking |
 | `canbox_process()` | function | `src/canbox.c` | Sends car state to Android via USART |
 | `canbox_park_process()` | function | `src/canbox.c` | Sends parking sensor data |
-| `hw_setup()` | function | `src/hw.c:18` | Init: clock → GPIO → systick → USART → CAN → conf |
+| `hw_setup()` | function | `src/hw.c:18` | Init: clock → GPIO → systick → USART → CAN |
 | `hw_sleep()` | function | `src/hw.c:37` | Disable periphs → CPU sleep → re-init on wake |
-| `e_car_t` | enum | `include/conf.h:9` | 7 car types + qcar (Qt emulator) |
-| `e_canbox_t` | enum | `include/conf.h:24` | 4 Android protocols |
-| `key_cb_t` | struct | `include/car.h:54` | SWC key callbacks (volume, prev/next, mode, navi, mute) |
+| `e_car_t` | enum | `include/car.h:11` | 7 car types + qcar (Qt emulator) |
+| `e_canbox_t` | enum | `include/canbox.h` | 4 Android protocols |
+| `key_cb_t` | struct | `include/car.h:68` | SWC key callbacks (volume, prev/next, mode, navi, mute) |
 
 ## Conventions (observe strictly — no config files exist)
 
@@ -94,10 +93,9 @@ canbox/
 - **No direct register access in shared code** — use `hw_*.h` API; platform code in `{target}/fw/` only
 - **No `#ifdef STM32F1` in new code** — use hardware abstraction (`hw_*.h`) instead; existing `#ifdef` in `sbrk.c` is legacy
 - **No hardcoded CAN IDs in `car.c`** — IDs belong in `cars/*.c` handler tables
-- **No magic numbers in config** — use `conf.h` enums, not raw integers for car/canbox selection
-- **No USART direct write outside `main.c` debug** — use `canbox_*_process()` functions for protocol output
+- **No magic numbers in config** — use `config.h` defines, not raw integers for car/canbox selection
+- **No USART direct write outside `canbox_*_process()`** — use protocol dispatchers for output
 - **No `sleep()` / blocking delays** — use `timer.flag_*` state machine instead
-- **Never skip `conf_write()` after config change** — config persists only when explicitly saved
 - **Platform-specific `.c` files must NOT pull in headers from other platforms**
 
 ## Commands
@@ -153,7 +151,7 @@ cd qt && qmake qcanbox.pro && make     # → qt/release/qcanbox(.exe)
 - Volvo OD2 flash unlock requires OpenOCD raw register writes — chip may be RDP-locked
 - `STATE_UNDEF` (0xff) is the "no data yet" sentinel in `carstate` — timeout handlers reset fields to this
 - Timer domains in main loop are NOT preemptive — they're flag-based, processed in sequence
-- `conf_write()` uses wear-leveling: writes to next slot, erases page only when wrapping
 - Car files in `cars/` are included (not linked) — must NOT have duplicate static symbols
-- Qt emulator defines `QCAR` macro to add `e_car_qcar` to `e_car_t` enum
+- Protocol files in `canbox_protos/*.c` are fully self-contained (all helpers duplicated) — included singly by `src/canbox.c`
+- Qt emulator defines `QCAR` macro to add `e_car_qcar` to `e_car_t` enum in `car.h`
 - HW schematics in `volvo_od2/hw/` and `vw_nc03/hw/` are KiCad, not Eagle/Altium
