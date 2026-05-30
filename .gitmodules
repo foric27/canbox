@@ -1,0 +1,6 @@
+[submodule "nuc131bsp"]
+	path = nuc131bsp
+	url = https://github.com/OpenNuvoton/NUC131BSP
+[submodule "libopencm3"]
+	path = libopencm3
+	url = https://github.com/libopencm3/libopencm3.git

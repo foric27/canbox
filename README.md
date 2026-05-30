@@ -55,6 +55,14 @@ CAN-адаптер — устройство, сопрягающее головн
 
 ## Сборка из исходников
 
+### Клонирование
+
+```bash
+git clone --recursive https://github.com/smartgauges/canbox.git
+# или, если уже клонировано без submodules:
+git submodule update --init --recursive
+```
+
 ### Linux
 
 ```bash
@@ -111,6 +119,8 @@ canbox/
 ├── include/              # заголовочные файлы API (10 .h-файлов)
 │   ├── hw.h, hw_can.h, hw_usart.h, hw_tick.h, hw_clock.h, hw_conf.h
 │   ├── canbox.h, car.h, config.h, ring.h
+├── libopencm3/           # git submodule — HAL для STM32F1
+├── nuc131bsp/            # git submodule — HAL для Nuvoton NUC131
 ```
 
 ## Архитектура
@@ -133,11 +143,12 @@ canbox/
 ## Нестандартные технические решения
 
 - Кастомные расширения объектных файлов (`.vo`, `.vwo`, `.qemu`, `.stm32f1`) — предотвращают коллизии имён при компиляции одних и тех же исходников под разные MCU
-- `libopencm3` — вендоренная копия, не submodule (для воспроизводимости сборки)
+- `libopencm3` — git submodule (HAL для STM32F1, v0.8.0)
+- `nuc131bsp` — git submodule (HAL для Nuvoton NUC131, v3.00.006)
 - `cars/*.c` — не компилируются отдельно, а `#include`-ятся в `car.c`
 - `canbox_protos/*.c` — не компилируются отдельно, а `#include`-ятся в `canbox.c`; каждый файл полностью самодостаточен
 - `flash_volvo_od2` — трёхстадийная разблокировка RDP чипа перед программированием
-- `startup_NUC131.o` — собирается из `startup_NUC131.S` (`.../NUC131/Source/GCC/`) по неявному правилу GNU Make
+- `startup_NUC131.vwo` — собирается из `startup_NUC131.S` (`nuc131bsp/Library/Device/Nuvoton/NUC131/Source/GCC/`) по правилу `out/%.vwo : %.S`
 - Бинарные файлы прошивок (`*.bin`) закоммичены в репозиторий для пользователей без toolchain
 
 ## Эмуляция и отладка

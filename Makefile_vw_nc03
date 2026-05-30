@@ -1,4 +1,4 @@
-NUC131_BSP_DIR = vw_nc03/fw/nuc131bsp
+NUC131_BSP_DIR = nuc131bsp
 NUC131_BSP_INCLUDES=-I$(NUC131_BSP_DIR)/Library/CMSIS/Include  -I$(NUC131_BSP_DIR)/Library/Device/Nuvoton/NUC131/Include -I$(NUC131_BSP_DIR)/Library/StdDriver/inc
 NUC131_COMMON_FLAGS=-mcpu=cortex-m0 -mthumb -msoft-float -Wall
 NUC131_INCLUDES=$(COMMON_INCLUDES) $(NUC131_BSP_INCLUDES)
@@ -20,7 +20,7 @@ NUC131_BSP_OBJS = out/$(NUC131_BSP_DIR)/Library/StdDriver/src/sys.vwo \
 		out/$(NUC131_BSP_DIR)/Library/StdDriver/src/can.vwo \
 		out/$(NUC131_BSP_DIR)/Library/StdDriver/src/fmc.vwo \
 		out/$(NUC131_BSP_DIR)/Library/Device/Nuvoton/NUC131/Source/system_NUC131.vwo \
-		out/$(NUC131_BSP_DIR)/Library/Device/Nuvoton/NUC131/Source/GCC/startup_NUC131.o
+		out/$(NUC131_BSP_DIR)/Library/Device/Nuvoton/NUC131/Source/GCC/startup_NUC131.vwo
 
 VW_NC03_OBJS = out/vw_nc03/fw/hw_clock.vwo \
 		out/vw_nc03/fw/hw_can.vwo \

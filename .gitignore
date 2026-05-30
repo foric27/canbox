@@ -44,6 +44,7 @@ sym-lib-table
 *.kicad_pcb-bak
 *.kicad_sch-bak
 _autosave-*
+*.net
 
 # OpenCode/Sisyphus
 .omo/
@@ -51,3 +52,7 @@ _autosave-*
 
 # Linux KDE
 .directory
+
+# Agent/AI configuration files (local only)
+AGENTS.md
+*/AGENTS.md

@@ -45,7 +45,7 @@ $F103_CFLAGS = $F103_ARCH + "-DSTM32F1" + $F103_INCLUDES + $COMMON_CFLAGS + "--s
 $F103_LDFLAGS = $F103_ARCH + $COMMON_LDFLAGS + "--specs=nosys.specs", "-nostartfiles"
 
 # ===== NUC131 (VW NC03) =====
-$NUC131_BSP_DIR = "vw_nc03/fw/nuc131bsp"
+$NUC131_BSP_DIR = "nuc131bsp"
 $NUC131_INCLUDES = $COMMON_INCLUDES +
     "-I$NUC131_BSP_DIR/Library/CMSIS/Include",
     "-I$NUC131_BSP_DIR/Library/Device/Nuvoton/NUC131/Include",
@@ -64,21 +64,21 @@ $CORE_SOURCES = @(
 $LIBOPENCM3_SOURCES = @(
     "libopencm3/lib/stm32/f1/gpio.c",
     "libopencm3/lib/stm32/f1/rcc.c",
-    "libopencm3/lib/stm32/f1/pwr.c",
     "libopencm3/lib/stm32/f1/flash.c",
     "libopencm3/lib/stm32/common/gpio_common_all.c",
     "libopencm3/lib/stm32/common/usart_common_all.c",
     "libopencm3/lib/stm32/common/usart_common_f124.c",
     "libopencm3/lib/stm32/common/rcc_common_all.c",
-    "libopencm3/lib/stm32/common/pwr_common_all.c",
     "libopencm3/lib/cm3/vector.c",
     "libopencm3/lib/cm3/systick.c",
     "libopencm3/lib/cm3/nvic.c",
     "libopencm3/lib/cm3/sync.c",
     "libopencm3/lib/stm32/common/flash_common_f01.c",
+    "libopencm3/lib/stm32/common/flash_common_all.c",
     "libopencm3/lib/stm32/can.c",
     "libopencm3/lib/stm32/common/iwdg_common_all.c",
-    "libopencm3/lib/stm32/common/exti_common_all.c"
+    "libopencm3/lib/stm32/common/exti_common_all.c",
+    "libopencm3/lib/stm32/common/pwr_common_v1.c"
 )
 
 # ===== Platform-specific sources =====

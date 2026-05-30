@@ -1,6 +1,6 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/can.h>
-#include <libopencm3/stm32/f1/nvic.h>
+#include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/exti.h>
 
@@ -103,8 +103,7 @@ uint8_t hw_can_set_speed(struct can_t * can, e_speed_t speed)
 		return ret;
 
 	/* CAN filter 0 init. */
-	can_filter_id_mask_32bit_init(can->baddr,
-				0,     /* Filter ID */
+	can_filter_id_mask_32bit_init(0,     /* Filter ID */
 				0,     /* CAN ID */
 				0,     /* CAN ID mask */
 				0,     /* FIFO assignment (here: FIFO0) */
@@ -201,15 +200,16 @@ uint32_t can_isr_cnt = 0;
 
 static void can_isr(struct can_t * can)
 {
-	uint32_t fmi;
+	uint8_t fmi;
 	struct msg_can_t msg;
 	uint8_t i, j;
 	uint32_t id = 0;
+	uint16_t timestamp;
 
 	can_isr_cnt++;
 	bool rtr = 0, ext = 0;
 
-	can_receive(can->baddr, 0, false, &id, &ext, &rtr, &fmi, &msg.len, msg.data);
+	can_receive(can->baddr, 0, false, &id, &ext, &rtr, &fmi, &msg.len, msg.data, &timestamp);
 	msg.id = id;
 
 	msg.type = 0;
@@ -253,7 +253,7 @@ void hw_can_snd_msg(struct can_t * can, struct msg_can_t * msg)
 {
 	if (!can_available_mailbox(can->baddr)) {
 
-		CAN_TSR(can->baddr) |= CAN_TSR_ABRQ0 | CAN_TSR_ABRQ1 | CAN_TSR_TABRQ2;
+		CAN_TSR(can->baddr) |= CAN_TSR_ABRQ0 | CAN_TSR_ABRQ1 | CAN_TSR_ABRQ2;
 	}
 
 	bool rtr = msg->type & e_can_rtr;
