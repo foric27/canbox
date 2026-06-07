@@ -7,6 +7,10 @@
 #include "hw_gpio.h"
 #include "hw_can.h"
 
+/**
+ * @brief Структура параметров битрейта CAN (заглушка)
+ * @note QEMU target: не используется, сохранена для совместимости
+ */
 typedef struct speed_t
 {
 	uint32_t sjw;
@@ -16,8 +20,8 @@ typedef struct speed_t
 } speed_t;
 
 #if 0
-/* APB1 36 MHz 87.5% sjw=1 */
-static speed_t speeds[e_speed_nums] = 
+/* APB1 36 МГц, sample point 87.5 %, SJW = 1 */
+static speed_t speeds[e_speed_nums] =
 {
 	{ CAN_BTR_SJW_1TQ, CAN_BTR_TS1_13TQ, CAN_BTR_TS2_2TQ, 22 },
 	{ CAN_BTR_SJW_1TQ, CAN_BTR_TS1_13TQ, CAN_BTR_TS2_2TQ, 18 },
@@ -26,8 +30,8 @@ static speed_t speeds[e_speed_nums] =
 	{ CAN_BTR_SJW_1TQ, CAN_BTR_TS1_15TQ, CAN_BTR_TS2_2TQ, 2 },
 };
 #else
-/* APB1 36 MHz 75% sjw=2 */
-static speed_t speeds[e_speed_nums] = 
+/* APB1 36 МГц, sample point 75 %, SJW = 2 */
+static speed_t speeds[e_speed_nums] =
 {
 	{ CAN_BTR_SJW_2TQ, CAN_BTR_TS1_13TQ, CAN_BTR_TS2_4TQ, 20 },
 	{ CAN_BTR_SJW_2TQ, CAN_BTR_TS1_13TQ, CAN_BTR_TS2_4TQ, 16 },
@@ -37,7 +41,15 @@ static speed_t speeds[e_speed_nums] =
 };
 #endif
 
+/** Размер буфера CAN-сообщений */
 #define MSGS_SIZE 80
+
+/**
+ * @brief Структура CAN-интерфейса (заглушка для QEMU)
+ *
+ * @note QEMU target: эмулирует работу CAN через виртуальный UART.
+ * Поля структуры идентичны реальному STM32F103 для совместимости.
+ */
 typedef struct can_t
 {
 	uint32_t rcc;
@@ -55,6 +67,7 @@ typedef struct can_t
 	uint8_t msgs_size;
 } can_t;
 
+/** Экземпляр CAN1 (базовый адрес CAN1, пины PA12/PA11, silent PB6) */
 static struct can_t can1 =
 {
 	.rcc = RCC_CAN,
@@ -70,27 +83,39 @@ static struct can_t can1 =
 	.msgs_size = 0,
 };
 
+/**
+ * @brief Получить указатель на основной CAN-интерфейс (заглушка)
+ * @return Указатель на структуру can1
+ * @note QEMU target: возвращает статический экземпляр для эмуляции
+ */
 struct can_t * hw_can_get_mscan(void)
 {
 	return &can1;
 }
 
+/**
+ * @brief Заглушка установки скорости CAN
+ * @param can   Указатель на структуру CAN
+ * @param speed Индекс скорости
+ * @return 0 (успех)
+ * @note QEMU target: скорость не имеет значения в эмуляции
+ */
 uint8_t hw_can_set_speed(struct can_t * can, e_speed_t speed)
 {
 	nvic_disable_irq(can->irq);
 	can_disable_irq(can->baddr, CAN_IER_FMPIE0);
 
-	/* Reset CAN. */
+	/* Сброс CAN-контроллера. */
 	can_reset(can->baddr);
 
-	/* CAN cell init. apb1 36 MHZ */
+	/* Инициализация CAN-ячейки, APB1 = 36 МГц. */
 	int ret = can_init(can->baddr,
-		     false,           /* TTCM: Time triggered comm mode? */
-		     true,            /* ABOM: Automatic bus-off management? */
-		     false,           /* AWUM: Automatic wakeup mode? */
-		     false,           /* NART: No automatic retransmission? */
-		     false,           /* RFLM: Receive FIFO locked mode? */
-		     false,           /* TXFP: Transmit FIFO priority? */
+		     false,           /* TTCM: режим синхронизации по времени? */
+		     true,            /* ABOM: автоматический выход из bus-off? */
+		     false,           /* AWUM: автоматическое пробуждение? */
+		     false,           /* NART: отключить автоповтор? */
+		     false,           /* RFLM: блокировка FIFO приёмника? */
+		     false,           /* TXFP: приоритет FIFO передачи? */
 		     speeds[speed].sjw,
 		     speeds[speed].ts1,
 		     speeds[speed].ts2,
@@ -102,20 +127,21 @@ uint8_t hw_can_set_speed(struct can_t * can, e_speed_t speed)
 	if (ret)
 		return ret;
 
-	/* CAN filter 0 init. */
-	can_filter_id_mask_32bit_init(0,     /* Filter ID */
+	/* Инициализация фильтра 0: пропускать все ID. */
+	can_filter_id_mask_32bit_init(0,     /* ID фильтра */
 				0,     /* CAN ID */
-				0,     /* CAN ID mask */
-				0,     /* FIFO assignment (here: FIFO0) */
-				true); /* Enable the filter. */
+				0,     /* Маска CAN ID */
+				0,     /* Назначение FIFO (здесь: FIFO0) */
+				true); /* Включить фильтр. */
 
-	/* Enable CAN RX interrupt. */
+	/* Разрешить прерывание по приёму в FIFO0. */
 	can_enable_irq(can->baddr, CAN_IER_FMPIE0);
 	nvic_enable_irq(can->irq);
 
 	return 0;
 }
 
+/** Типы CAN-кадров (битовые флаги) */
 enum e_can_types
 {
 	e_can_simple = 0x0,
@@ -125,9 +151,16 @@ enum e_can_types
 	e_can_rtr = 0x80,
 };
 
+/**
+ * @brief Заглушка полной инициализации CAN
+ * @param can   Указатель на структуру CAN
+ * @param speed Индекс скорости
+ * @return Результат hw_can_set_speed()
+ * @note QEMU target: использует реальные регистры STM32F100 для совместимости
+ */
 uint8_t hw_can_setup(struct can_t * can, e_speed_t speed)
 {
-	/* Enable peripheral clocks. */
+	/* Включение тактирования периферии. */
 	rcc_periph_clock_enable(can->rcc);
 	rcc_periph_clock_enable(can->rx.rcc);
 	rcc_periph_clock_enable(can->tx.rcc);
@@ -135,25 +168,30 @@ uint8_t hw_can_setup(struct can_t * can, e_speed_t speed)
 	exti_disable_request(EXTI11);
 	nvic_disable_irq(NVIC_EXTI15_10_IRQ);
 
-	/* Configure CAN pin: RX (input pull-up). */
+	/* Настройка пина CAN RX: вход с подтяжкой к VDD. */
 	gpio_set_mode(can->rx.port, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, can->rx.pin);
 	gpio_set(can->rx.port, can->rx.pin);
 
-	/* Configure CAN pin: TX. */
+	/* Настройка пина CAN TX: альтернативная функция, push-pull. */
 	gpio_set_mode(can->tx.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, can->tx.pin);
 
 	rcc_periph_clock_enable(can->s.rcc);
-	//silent mode - disable tx zl1040
+	/* Silent mode — отключение передатчика ZL1040. */
 	gpio_set(can->s.port, can->s.pin);
 	gpio_set_mode(can->s.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, can->s.pin);
 
-	/* NVIC setup. */
+	/* Настройка NVIC. */
 	nvic_enable_irq(can->irq);
 	nvic_set_priority(can->irq, 1);
 
 	return hw_can_set_speed(can, speed);
 }
 
+/**
+ * @brief Заглушка отключения CAN
+ * @param can Указатель на структуру CAN
+ * @note QEMU target: выполняет полную последовательность отключения
+ */
 void hw_can_disable(struct can_t * can)
 {
 	nvic_disable_irq(can->irq);
@@ -163,7 +201,7 @@ void hw_can_disable(struct can_t * can)
 	rcc_periph_clock_disable(can->rcc);
 
 	rcc_periph_clock_enable(can->s.rcc);
-	//silent mode - disable tx zl1040
+	/* Silent mode — отключение передатчика ZL1040. */
 	gpio_set(can->s.port, can->s.pin);
 	rcc_periph_clock_disable(can->s.rcc);
 
@@ -176,16 +214,33 @@ void hw_can_disable(struct can_t * can)
 	rcc_periph_clock_disable(can->tx.rcc);
 }
 
+/**
+ * @brief Заглушка: получить количество сообщений в буфере
+ * @param can Указатель на структуру CAN
+ * @return Текущий размер msgs_size
+ */
 uint8_t hw_can_get_msg_nums(can_t * can)
 {
 	return can->msgs_size;
 }
 
+/**
+ * @brief Заглушка: получить количество принятых пакетов
+ * @param can Указатель на структуру CAN
+ * @return Счётчик nums
+ */
 uint32_t hw_can_get_pack_nums(struct can_t * can)
 {
 	return can->nums;
 }
 
+/**
+ * @brief Заглушка: получить CAN-сообщение по индексу
+ * @param can Указатель на структуру CAN
+ * @param msg Буфер для копирования сообщения
+ * @param idx Индекс в массиве msgs
+ * @return 1 при успехе, 0 если индекс вне диапазона
+ */
 uint8_t hw_can_get_msg(struct can_t * can, struct msg_can_t * msg, uint8_t idx)
 {
 	if (idx >= can->msgs_size)
@@ -196,8 +251,14 @@ uint8_t hw_can_get_msg(struct can_t * can, struct msg_can_t * msg, uint8_t idx)
 	return 1;
 }
 
+/** Счётчик входов в CAN-прерывание (для отладки) */
 uint32_t can_isr_cnt = 0;
 
+/**
+ * @brief Заглушка обработчика CAN-прерывания
+ * @param can Указатель на структуру CAN
+ * @note QEMU target: использует реальные регистры STM32F100
+ */
 static void can_isr(struct can_t * can)
 {
 	uint8_t fmi;
@@ -244,11 +305,21 @@ static void can_isr(struct can_t * can)
 	can_fifo_release(can->baddr, 0);
 }
 
+/**
+ * @brief Заглушка обработчика прерывания USB_LP / CAN_RX0
+ * @note QEMU target: перенаправляет в can_isr()
+ */
 void usb_lp_can_rx0_isr(void)
 {
 	can_isr(hw_can_get_mscan());
 }
 
+/**
+ * @brief Заглушка передачи CAN-сообщения
+ * @param can Указатель на структуру CAN
+ * @param msg Указатель на сообщение для передачи
+ * @note QEMU target: передача через виртуальный UART
+ */
 void hw_can_snd_msg(struct can_t * can, struct msg_can_t * msg)
 {
 	if (!can_available_mailbox(can->baddr)) {
@@ -261,15 +332,24 @@ void hw_can_snd_msg(struct can_t * can, struct msg_can_t * msg)
 	can_transmit(can->baddr, msg->id, ext, rtr, msg->len, msg->data);
 }
 
+/**
+ * @brief Заглушка очистки буфера CAN-сообщений
+ * @param can Указатель на структуру CAN
+ */
 void hw_can_clr(struct can_t * can)
 {
 	can->nums = 0;
 	can->msgs_size = 0;
 }
 
+/**
+ * @brief Заглушка перевода CAN в режим сна
+ * @param can Указатель на структуру CAN
+ * @note QEMU target: отключает CAN и настраивает EXTI для пробуждения
+ */
 void hw_can_sleep(struct can_t * can)
 {
-	//silent mode - disable tx zl1040
+	/* Silent mode — отключение передатчика ZL1040. */
 	rcc_periph_clock_enable(can->s.rcc);
 	gpio_set(can->s.port, can->s.pin);
 	gpio_set_mode(can->s.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, can->s.pin);
@@ -279,22 +359,22 @@ void hw_can_sleep(struct can_t * can)
 
 	rcc_periph_clock_enable(can->rx.rcc);
 	gpio_set_mode(can->rx.port, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, can->rx.pin);
-	//pull-up
+	/* Подтяжка к VDD. */
 	gpio_set(can->rx.port, can->rx.pin);
 	rcc_periph_clock_disable(can->rx.rcc);
 
 	exti_select_source(EXTI11, can->rx.port);
 	exti_set_trigger(EXTI11, EXTI_TRIGGER_BOTH);
 	exti_enable_request(EXTI11);
-	//exti_reset_request(EXTI11);
 	nvic_enable_irq(NVIC_EXTI15_10_IRQ);
 #endif
 }
 
+/**
+ * @brief Заглушка обработчика прерывания EXTI15_10
+ * @note QEMU target: сбрасывает флаг EXTI11
+ */
 void exti15_10_isr(void)
 {
 	exti_reset_request(EXTI11);
-	//exti_disable_request(EXTI11);
-	//nvic_disable_irq(NVIC_EXTI15_10_IRQ);
 }
-

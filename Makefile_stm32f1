@@ -1,14 +1,48 @@
+# Директория с vendored-библиотекой libopencm3 (STM32 HAL)
+# Не является git-подмодулем — скоммичена напрямую
 LIBOPENCM3_DIR = libopencm3
+
+# Пути include для libopencm3 (заголовки CMSIS и драйверов STM32F1)
 LIBOPENCM3_INCLUDES = -I$(LIBOPENCM3_DIR)/include
+
+# Архитектурные флаги компиляции для STM32F103 (Cortex-M3)
+# -mcpu=cortex-m3: целевой процессор Cortex-M3
+# -mthumb: генерировать Thumb-инструкции (16/32-бит, компактнее ARM-режима)
+# -mfix-cortex-m3-ldrd: обход аппаратного бага LDRD/STRD на ранних ревизиях M3
+# -msoft-float: программная эмуляция FPU (STM32F103 не имеет аппаратного FPU)
+# -Wall: включить все основные предупреждения
 F103_COMMON_FLAGS=-mcpu=cortex-m3 -mthumb -mfix-cortex-m3-ldrd -msoft-float -Wall
+
+# Полный набор include-путей для STM32F1-целей (Volvo OD2 + QEMU)
+# Объединяет общие include (include/) и include libopencm3
 F103_INCLUDES=$(COMMON_INCLUDES) $(LIBOPENCM3_INCLUDES)
-F103_CFLAGS=$(F103_COMMON_FLAGS) -DSTM32F1 $(F103_INCLUDES) $(COMMON_CFLAGS) --specs=nosys.specs 
+
+# Полные флаги компиляции C для STM32F1
+# Добавляет к архитектурным флагам:
+# -DSTM32F1: макрос препроцессора для условной компиляции под STM32F1
+# $(F103_INCLUDES): пути к заголовкам
+# $(COMMON_CFLAGS): общие флаги оптимизации/предупреждений из корневого Makefile
+# --specs=nosys.specs: использовать заглушки системных вызовов (нет ОС)
+F103_CFLAGS=$(F103_COMMON_FLAGS) -DSTM32F1 $(F103_INCLUDES) $(COMMON_CFLAGS) --specs=nosys.specs
+
+# Полные флаги линковщика для STM32F1
+# $(F103_COMMON_FLAGS): архитектурные флаги (нужны линковщику для выбора multilib)
+# $(COMMON_LDFLAGS): общие флаги из корневого Makefile
+# --specs=nosys.specs: заглушки для _exit, _sbrk и др. системных вызовов
+# -nostartfiles: не использовать стандартные startup-файлы (используем libopencm3)
 F103_LDFLAGS=$(F103_COMMON_FLAGS) $(COMMON_LDFLAGS) --specs=nosys.specs -nostartfiles
 
+# Правило компиляции .c → .stm32f1 (объектные файлы libopencm3)
+# Расширение .stm32f1 используется для предотвращения конфликтов имён
+# при параллельной сборке нескольких целей из одних исходников
+# mkdir -p создаёт поддиректории в out/ по необходимости
 out/%.stm32f1 : %.c
 	mkdir -p $(dir $@)
 	$(CC) $(F103_CFLAGS) -c $< -o $@
 
+# Список объектных файлов libopencm3, необходимых для Volvo OD2 и QEMU
+# Каждый файл компилируется с расширением .stm32f1 по правилу выше
+# Список включает драйверы: GPIO, RCC, FLASH, USART, SYSTICK, NVIC, CAN, IWDG, EXTI, PWR
 LIBOPENCM3_OBJS = out/$(LIBOPENCM3_DIR)/lib/stm32/f1/gpio.stm32f1 \
 		out/$(LIBOPENCM3_DIR)/lib/stm32/f1/rcc.stm32f1 \
 		out/$(LIBOPENCM3_DIR)/lib/stm32/f1/flash.stm32f1 \
@@ -26,4 +60,3 @@ LIBOPENCM3_OBJS = out/$(LIBOPENCM3_DIR)/lib/stm32/f1/gpio.stm32f1 \
 		out/$(LIBOPENCM3_DIR)/lib/stm32/common/iwdg_common_all.stm32f1 \
 		out/$(LIBOPENCM3_DIR)/lib/stm32/common/exti_common_all.stm32f1 \
 		out/$(LIBOPENCM3_DIR)/lib/stm32/common/pwr_common_v1.stm32f1
-

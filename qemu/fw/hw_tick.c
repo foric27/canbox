@@ -4,29 +4,40 @@
 
 #include "hw_tick.h"
 
+/**
+ * @brief Заглушка отключения SysTick для QEMU
+ * @note QEMU target: останавливает счётчик и прерывание
+ */
 void hw_systick_disable(void)
 {
 	systick_interrupt_disable();
 	systick_counter_disable();
 }
 
+/**
+ * @brief Заглушка настройки SysTick для QEMU
+ * @note QEMU target: 24 МГц / 8 => 3 000 000 отсчётов/с
+ */
 void hw_systick_setup(void)
 {
-	/* 24MHz / 8 => 3000000 counts per second */
+	/* 24 МГц / 8 => 3 000 000 отсчётов в секунду */
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-	/* clear counter so it starts right away */
+	/* Сброс счётчика для немедленного старта */
 	STK_CVR = 0;
 
 	systick_set_reload(3000000 / TICK_HZ);
 
 	systick_interrupt_enable();
 
-	/* Start counting. */
+	/* Запуск счётчика. */
 	systick_counter_enable();
 }
 
+/**
+ * @brief Заглушка обработчика прерывания SysTick
+ * @note QEMU target: вызывает hw_systick_callback()
+ */
 void sys_tick_handler(void)
 {
 	hw_systick_callback();
 }
-

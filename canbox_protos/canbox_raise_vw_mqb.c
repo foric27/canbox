@@ -1,16 +1,33 @@
-/*
- * canbox_raise_vw_mqb.c — Raise VW(MQB) protocol
+/**
+ * @file canbox_raise_vw_mqb.c
+ * @brief Протокол Raise VW (MQB) для Android-головного устройства
  *
- * Fully self-contained. All symbols static except public API.
+ * Полностью самодостаточный файл. Все символы static, кроме публичного API.
+ * Компилируется через #include внутри src/canbox.c.
  */
 
 #include <string.h>
 
+/**
+ * @brief Линейное масштабирование значения из одного диапазона в другой
+ * @param value Входное значение
+ * @param in_min Минимум входного диапазона
+ * @param in_max Максимум входного диапазона
+ * @param out_min Минимум выходного диапазона
+ * @param out_max Максимум выходного диапазона
+ * @return Масштабированное значение
+ */
 static float scale(float value, float in_min, float in_max, float out_min, float out_max)
 {
 	return (((value - in_min) * (out_max - out_min)) / (in_max - in_min)) + out_min;
 }
 
+/**
+ * @brief Расчёт контрольной суммы для протокола Raise
+ * @param buf Указатель на буфер данных
+ * @param len Длина буфера
+ * @return Контрольная сумма (сумма всех байтов, инвертированная XOR 0xFF)
+ */
 static uint8_t canbox_checksum(uint8_t * buf, uint8_t len)
 {
 	uint8_t sum = 0;
@@ -20,6 +37,15 @@ static uint8_t canbox_checksum(uint8_t * buf, uint8_t len)
 	return sum;
 }
 
+/**
+ * @brief Отправка сообщения по протоколу Raise
+ * @param type Тип сообщения (байт команды)
+ * @param msg Указатель на данные
+ * @param size Размер данных
+ *
+ * Формирует пакет: [0x2E][тип][длина][данные...][чексумма]
+ * Отправляет через hw_usart_write().
+ */
 static void snd_canbox_msg(uint8_t type, uint8_t * msg, uint8_t size)
 {
 	uint8_t buf[4 + size];
@@ -33,6 +59,15 @@ static void snd_canbox_msg(uint8_t type, uint8_t * msg, uint8_t size)
 
 extern uint8_t get_rear_delay_state(void);
 
+/**
+ * @brief Отправка данных о положении рулевого колеса
+ * @param type Тип сообщения (например, 0x29 для MQB)
+ * @param min Минимальное значение угла
+ * @param max Максимальное значение угла
+ *
+ * Получает угол руля через car_get_wheel(), масштабирует и отправляет.
+ * Работает только при активном заднем ходе (get_rear_delay_state()).
+ */
 static void canbox_raise_vw_wheel_process(uint8_t type, int16_t min, int16_t max)
 {
 	if (!get_rear_delay_state())
@@ -47,6 +82,19 @@ static void canbox_raise_vw_wheel_process(uint8_t type, int16_t min, int16_t max
 	snd_canbox_msg(type, wbuf, sizeof(wbuf));
 }
 
+/**
+ * @brief Отправка данных о состоянии дверей (MQB-формат)
+ *
+ * Формирует пакет 0x24, 1 байт:
+ * - бит 2: капот
+ * - бит 3: багажник
+ * - бит 4: задняя левая дверь
+ * - бит 5: задняя правая дверь
+ * - бит 6: передняя левая дверь
+ * - бит 7: передняя правая дверь
+ *
+ * Использует car_get_door_*(), car_get_tailgate(), car_get_bonnet().
+ */
 static void canbox_raise_vw_mqb_door_process(void)
 {
 	uint8_t fl_door = car_get_door_fl();
@@ -74,6 +122,17 @@ static void canbox_raise_vw_mqb_door_process(void)
 	snd_canbox_msg(0x24, &state, 1);
 }
 
+/**
+ * @brief Отправка данных парктроника (радар)
+ * @param fmax Массив максимальных значений для 4 передних датчиков
+ * @param rmax Массив максимальных значений для 4 задних датчиков
+ *
+ * Формирует и отправляет:
+ * - 0x23: данные 4 передних датчиков
+ * - 0x22: данные 4 задних датчиков
+ *
+ * Использует car_get_radar().
+ */
 static void canbox_raise_vw_radar_process(uint8_t fmax[4], uint8_t rmax[4])
 {
 	struct radar_t radar;
@@ -106,8 +165,12 @@ static void canbox_raise_vw_radar_process(uint8_t fmax[4], uint8_t rmax[4])
 	snd_canbox_msg(0x22, rbuf, sizeof(rbuf));
 }
 
-/*
- * SWC key callbacks
+/**
+ * @brief Callback: кнопка "громкость +" на руле
+ * @param val Величина изменения громкости (не используется)
+ *
+ * Отправляет команду 0x20 0x01 0x01 (нажатие) и 0x20 0x01 0x00 (отпускание)
+ * в Android-головное устройство.
  */
 void canbox_inc_volume(uint8_t val)
 {
@@ -118,6 +181,12 @@ void canbox_inc_volume(uint8_t val)
 	snd_canbox_msg(0x20, buf, sizeof(buf));
 }
 
+/**
+ * @brief Callback: кнопка "громкость -" на руле
+ * @param val Величина изменения громкости (не используется)
+ *
+ * Отправляет команду 0x20 0x02 0x01 (нажатие) и 0x20 0x02 0x00 (отпускание).
+ */
 void canbox_dec_volume(uint8_t val)
 {
 	(void)val;
@@ -127,6 +196,11 @@ void canbox_dec_volume(uint8_t val)
 	snd_canbox_msg(0x20, buf, sizeof(buf));
 }
 
+/**
+ * @brief Callback: кнопка "предыдущий трек" на руле
+ *
+ * Отправляет команду 0x20 0x04 0x01 (нажатие) и 0x20 0x04 0x00 (отпускание).
+ */
 void canbox_prev(void)
 {
 	uint8_t buf[] = { 0x04, 0x01 };
@@ -135,6 +209,11 @@ void canbox_prev(void)
 	snd_canbox_msg(0x20, buf, sizeof(buf));
 }
 
+/**
+ * @brief Callback: кнопка "следующий трек" на руле
+ *
+ * Отправляет команду 0x20 0x03 0x01 (нажатие) и 0x20 0x03 0x00 (отпускание).
+ */
 void canbox_next(void)
 {
 	uint8_t buf[] = { 0x03, 0x01 };
@@ -143,6 +222,11 @@ void canbox_next(void)
 	snd_canbox_msg(0x20, buf, sizeof(buf));
 }
 
+/**
+ * @brief Callback: кнопка "режим" (MODE) на руле
+ *
+ * Отправляет команду 0x20 0x0A 0x01 (нажатие) и 0x20 0x0A 0x00 (отпускание).
+ */
 void canbox_mode(void)
 {
 	uint8_t buf[] = { 0x0a, 0x01 };
@@ -151,6 +235,11 @@ void canbox_mode(void)
 	snd_canbox_msg(0x20, buf, sizeof(buf));
 }
 
+/**
+ * @brief Callback: кнопка "продолжить/пауза" на руле
+ *
+ * Отправляет команду 0x20 0x09 0x01 (нажатие) и 0x20 0x09 0x00 (отпускание).
+ */
 void canbox_cont(void)
 {
 	uint8_t buf[] = { 0x09, 0x01 };
@@ -159,6 +248,11 @@ void canbox_cont(void)
 	snd_canbox_msg(0x20, buf, sizeof(buf));
 }
 
+/**
+ * @brief Callback: кнопка "голосовой ввод / микрофон" на руле
+ *
+ * Отправляет команду 0x20 0x0C 0x01 (нажатие) и 0x20 0x0C 0x00 (отпускание).
+ */
 void canbox_mici(void)
 {
 	uint8_t buf[] = { 0x0c, 0x01 };
@@ -167,8 +261,13 @@ void canbox_mici(void)
 	snd_canbox_msg(0x20, buf, sizeof(buf));
 }
 
-/*
- * RX state machine
+/**
+ * @brief Обработка принятой команды от Android-ГУ
+ * @param cmdbuf Буфер с принятым пакетом
+ * @param len Длина пакета
+ *
+ * Распознаёт команды: 0x81, 0x90, 0xA0, 0xA6.
+ * В текущей реализации обработчики пустые (зарезервировано).
  */
 static void canbox_raise_cmd_process(uint8_t * cmdbuf, uint8_t len)
 {
@@ -185,20 +284,32 @@ static void canbox_raise_cmd_process(uint8_t * cmdbuf, uint8_t len)
 	}
 }
 
+/**
+ * @brief Перечисление состояний RX state machine
+ */
 enum rx_state
 {
-	RX_WAIT_START,
-	RX_LEN,
-	RX_CMD,
-	RX_DATA,
-	RX_CRC
+	RX_WAIT_START, /**< Ожидание стартового байта 0x2E */
+	RX_CMD,        /**< Приём байта команды */
+	RX_LEN,        /**< Приём байта длины */
+	RX_DATA,       /**< Приём полезных данных */
+	RX_CRC         /**< Приём контрольной суммы */
 };
 
 #define RX_BUFFER_SIZE 32
-static uint8_t rx_buffer[RX_BUFFER_SIZE];
-static uint8_t rx_idx = 0;
-static uint8_t rx_state = RX_WAIT_START;
+static uint8_t rx_buffer[RX_BUFFER_SIZE]; /**< Буфер приёма */
+static uint8_t rx_idx = 0;                /**< Текущий индекс в буфере */
+static uint8_t rx_state = RX_WAIT_START;  /**< Текущее состояние автомата */
 
+/**
+ * @brief RX state machine: приём байта от Android-ГУ
+ * @param ch Полученный байт с USART
+ *
+ * Состояния: WAIT_START (0x2E) → CMD → LEN → DATA → CRC.
+ * После успешного приёма CRC отправляет ACK (0xFF) и вызывает
+ * canbox_raise_cmd_process() для обработки команды.
+ * При переполнении буфера сбрасывается в WAIT_START.
+ */
 static void canbox_raise_rx_process(uint8_t ch)
 {
 	switch (rx_state) {
@@ -238,13 +349,23 @@ static void canbox_raise_rx_process(uint8_t ch)
 		rx_state = RX_WAIT_START;
 }
 
+/**
+ * @brief Публичный API: обработка входящего байта с USART
+ * @param ch Полученный байт
+ *
+ * Перенаправляет в canbox_raise_rx_process() — RX state machine протокола Raise.
+ */
 void canbox_rx_process(uint8_t ch)
 {
 	canbox_raise_rx_process(ch);
 }
 
-/*
- * Entry points
+/**
+ * @brief Точка входа основного цикла (250 мс)
+ *
+ * Вызывает:
+ * - canbox_raise_vw_wheel_process(0x29, -19980, 19980) — руль
+ * - canbox_raise_vw_mqb_door_process() — двери
  */
 static void canbox_raise_vw_mqb_process(void)
 {
@@ -252,6 +373,13 @@ static void canbox_raise_vw_mqb_process(void)
 	canbox_raise_vw_mqb_door_process();
 }
 
+/**
+ * @brief Точка входа цикла парктроника (100 мс)
+ *
+ * Вызывает canbox_raise_vw_radar_process() с диапазонами:
+ * - передние: {60, 120, 120, 60}
+ * - задние: {60, 165, 165, 60}
+ */
 static void canbox_raise_vw_mqb_park_process(void)
 {
 	uint8_t fmax[4] = { 60, 120, 120, 60 };

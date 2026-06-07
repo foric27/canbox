@@ -1,7 +1,19 @@
 #include "hw_tick.h"
 
+/** @brief Глобальная структура таймерных флагов и счетчиков */
 volatile tick_t timer = { 0, 0, 0, 0, 0, 0, 0 };
 
+/**
+ * @brief Обработчик прерывания SysTick (1 мс)
+ * @note Вызывается аппаратно каждую миллисекунду.
+ *       Генерирует флаги для различных таймерных доменов:
+ *       - flag_tick:    каждый 1 мс
+ *       - flag_5ms:     каждые 5 мс
+ *       - flag_100ms:   каждые 100 мс
+ *       - flag_250ms:   каждые 250 мс
+ *       - flag_1000ms:  каждую секунду
+ *       Также обновляет счетчики msec и sec.
+ */
 void hw_systick_callback(void)
 {
 	static uint16_t div_1000ms = 0;
@@ -38,4 +50,3 @@ void hw_systick_callback(void)
 		timer.flag_5ms = 1;
 	}
 }
-

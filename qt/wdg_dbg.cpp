@@ -5,6 +5,14 @@
 #include "wdg_dbg.h"
 #include "ui_dbg.h"
 
+/**
+ * @brief Конструктор отладочного виджета
+ * @param parent Родительский виджет
+ *
+ * Заполняет выпадающий список cb_level уровнями логирования
+ * (Warn, Status, Info, Debug, All), устанавливает фильтр "All"
+ * и связывает кнопки Clear/Save со слотами.
+ */
 wdg_dbg_t::wdg_dbg_t(QWidget * parent) : QWidget(parent), ui(new Ui::dbg)
 {
 	ui->setupUi(this);
@@ -21,10 +29,25 @@ wdg_dbg_t::wdg_dbg_t(QWidget * parent) : QWidget(parent), ui(new Ui::dbg)
 	connect(ui->btn_save, &QPushButton::clicked, this, &wdg_dbg_t::slt_btn_save);
 }
 
+/**
+ * @brief Деструктор
+ */
 wdg_dbg_t::~wdg_dbg_t()
 {
 }
 
+/**
+ * @brief Добавление сообщения в журнал с фильтрацией по уровню
+ * @param lvl Уровень важности сообщения
+ * @param txt Текст сообщения
+ *
+ * Сравнивает уровень сообщения с выбранным в cb_level.
+ * Если сообщение отфильтровано — возврат без вывода.
+ * Иначе добавляет временную метку и выводит:
+ * - Warn — красным цветом (HTML)
+ * - Debug — синим цветом (HTML)
+ * - Остальные — обычным текстом
+ */
 void wdg_dbg_t::slt_log(uint8_t lvl, const QString & txt)
 {
 	QVariant variant = ui->cb_level->currentData();
@@ -43,11 +66,21 @@ void wdg_dbg_t::slt_log(uint8_t lvl, const QString & txt)
 		ui->log->appendPlainText(st + " " + txt);
 }
 
+/**
+ * @brief Очистка содержимого журнала
+ */
 void wdg_dbg_t::slt_btn_clr()
 {
 	ui->log->clear();
 }
 
+/**
+ * @brief Сохранение журнала в текстовый файл
+ *
+ * Формирует имя файла по умолчанию: qcanbox-log-<гггг-ММ-дд-hhmmss>.txt.
+ * Открывает диалог сохранения, записывает содержимое QPlainTextEdit
+ * в файл в локальной кодировке.
+ */
 void wdg_dbg_t::slt_btn_save()
 {
 	QDateTime dt = QDateTime::currentDateTime();
@@ -66,4 +99,3 @@ void wdg_dbg_t::slt_btn_save()
 
 	file.close();
 }
-

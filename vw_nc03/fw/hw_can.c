@@ -5,7 +5,15 @@
 #include "hw_gpio.h"
 #include "hw_usart.h"
 
+/** Размер буфера CAN-сообщений */
 #define MSGS_SIZE 80
+
+/**
+ * @brief Структура CAN-интерфейса для NUC131
+ *
+ * Хранит указатель на регистры CAN_T, тактирование, сброс,
+ * прерывание, пины RX/TX/STBY и кольцевой буфер сообщений.
+ */
 typedef struct can_t
 {
 	CAN_T * baddr;
@@ -20,6 +28,7 @@ typedef struct can_t
 	uint8_t msgs_size;
 } can_t;
 
+/** Экземпляр CAN0 (пины PD6-RX, PD7-TX, PC3-STBY) */
 static struct can_t can0 =
 {
 	.baddr = CAN0,
@@ -34,11 +43,23 @@ static struct can_t can0 =
 	.msgs_size = 0,
 };
 
+/**
+ * @brief Получить указатель на основной CAN-интерфейс
+ * @return Указатель на can0
+ */
 struct can_t * hw_can_get_mscan(void)
 {
 	return &can0;
 }
 
+/**
+ * @brief Добавить или обновить сообщение в буфере
+ * @param can Указатель на структуру CAN
+ * @param msg Указатель на принятое сообщение
+ *
+ * Если ID уже существует — обновляет данные и счётчик,
+ * иначе добавляет новую запись (до MSGS_SIZE).
+ */
 void hw_can_rcv_msg(struct can_t * can, msg_can_t * msg)
 {
 	uint8_t found = 0;
@@ -63,7 +84,16 @@ void hw_can_rcv_msg(struct can_t * can, msg_can_t * msg)
 	}
 }
 
+/** Счётчик входов в CAN-прерывание (для отладки) */
 uint32_t can_isr_cnt = 0;
+
+/**
+ * @brief Обработчик CAN-прерывания (общий)
+ * @param can Указатель на структуру CAN
+ *
+ * Анализирует IIDR: обрабатывает статусные прерывания (RXOK/TXOK),
+ * читает сообщения из Message Object и обрабатывает Wake-up.
+ */
 static void can_isr(struct can_t * can)
 {
 	uint32_t u8IIDRstatus;
@@ -72,20 +102,20 @@ static void can_isr(struct can_t * can)
 
 	u8IIDRstatus = can->baddr->IIDR;
 
-	/* Check Status Interrupt Flag (Error status Int and Status change Int) */
+	/* Статусное прерывание (ошибка или изменение состояния) */
 	if (u8IIDRstatus == 0x00008000)
 	{
 		uint32_t sts = can->baddr->STATUS;
 
 		if (sts & CAN_STATUS_RXOK_Msk)
 		{
-			/* Clear RxOK status*/
+			/* Сброс флага RXOK */
 			can->baddr->STATUS &= ~CAN_STATUS_RXOK_Msk;
 		}
 
 		if(sts & CAN_STATUS_TXOK_Msk)
 		{
-			/* Clear TxOK status*/
+			/* Сброс флага TXOK */
 			can->baddr->STATUS &= ~CAN_STATUS_TXOK_Msk;
 		}
 	}
@@ -101,37 +131,55 @@ static void can_isr(struct can_t * can)
 		for (uint8_t i = 0; i < 8; i++)
 			msg.data[i] = rrMsg.Data[i];
 
-		//msg.type = e_can_statistic;
-		//if (rrMsg == CAN_EXT_ID)
-		//	msg.type |= e_can_ext;
-
 		hw_can_rcv_msg(can, &msg);
 
-		/* Clear Interrupt Pending */
+		/* Сброс флага прерывания */
 		CAN_CLR_INT_PENDING_BIT(can->baddr, (u8IIDRstatus - 1));
 	}
 	else if (can->baddr->WU_STATUS == 1)
 	{
-		/* Write '0' to clear */
+		/* Сброс флага Wake-up (записью 0) */
 		can->baddr->WU_STATUS = 0;
 	}
 }
 
+/**
+ * @brief Обработчик прерывания CAN0_IRQn
+ *
+ * Вызывает can_isr() для can0.
+ */
 void CAN0_IRQHandler(void)
 {
 	can_isr(&can0);
 }
 
+/**
+ * @brief Получить количество уникальных CAN-сообщений в буфере
+ * @param can Указатель на структуру CAN
+ * @return Текущий размер msgs_size
+ */
 uint8_t hw_can_get_msg_nums(can_t * can)
 {
 	return can->msgs_size;
 }
 
+/**
+ * @brief Получить общее количество принятых CAN-пакетов
+ * @param can Указатель на структуру CAN
+ * @return Счётчик nums
+ */
 uint32_t hw_can_get_pack_nums(struct can_t * can)
 {
 	return can->nums;
 }
 
+/**
+ * @brief Получить CAN-сообщение по индексу
+ * @param can Указатель на структуру CAN
+ * @param msg Буфер для копирования сообщения
+ * @param idx Индекс в массиве msgs
+ * @return 1 при успехе, 0 если индекс вне диапазона
+ */
 uint8_t hw_can_get_msg(can_t * can, struct msg_can_t * msg, uint8_t idx)
 {
 	if (idx >= can->msgs_size)
@@ -142,10 +190,32 @@ uint8_t hw_can_get_msg(can_t * can, struct msg_can_t * msg, uint8_t idx)
 	return 1;
 }
 
+/** Таблица скоростей CAN (бит/с) */
 uint32_t speeds[e_speed_nums] = { 100000, 125000, 250000, 500000, 1000000 };
 
+/**
+ * @brief Настройка приёмного Message Object с маской (внешний символ)
+ * @param tCAN          Указатель на CAN_T
+ * @param u8MsgObj      Номер Message Object
+ * @param u8idType      Тип ID (стандартный / расширенный)
+ * @param u32id         Идентификатор
+ * @param u32idmask     Маска ID
+ * @param u8singleOrFifoLast Режим FIFO
+ * @return TRUE/FALSE
+ */
 int32_t CAN_SetRxMsgObjAndMsk(CAN_T *tCAN, uint8_t u8MsgObj, uint8_t u8idType, uint32_t u32id, uint32_t u32idmask, uint8_t u8singleOrFifoLast);
 
+/**
+ * @brief Полная инициализация CAN-интерфейса
+ * @param can   Указатель на структуру CAN
+ * @param speed Индекс скорости
+ * @return 0 при успехе, 1 при ошибке настройки фильтра
+ *
+ * Включает тактирование, настраивает пины STBY, сбрасывает модуль,
+ * устанавливает мультифункциональные пины PD6/PD7,
+ * открывает CAN в нормальном режиме, разрешает прерывания
+ * и настраивает приёмные Message Object (все ID).
+ */
 uint8_t hw_can_setup(struct can_t * can, e_speed_t speed)
 {
 	CLK_EnableModuleClock(can->clk);
@@ -155,20 +225,18 @@ uint8_t hw_can_setup(struct can_t * can, e_speed_t speed)
 
 	SYS_ResetModule(can->rst);
 
-	/* Set PD multi-function pins for CANTX0, CANRX0 */
+	/* Настройка мультифункциональных пинов PD6 (RX) и PD7 (TX) */
 	SYS->GPD_MFP &= ~(SYS_GPD_MFP_PD6_Msk | SYS_GPD_MFP_PD7_Msk);
 	SYS->GPD_MFP |= SYS_GPD_MFP_PD6_CAN0_RXD | SYS_GPD_MFP_PD7_CAN0_TXD;
 
 	CAN_Open(can->baddr,  speeds[speed], CAN_NORMAL_MODE);
 
-	/* Enable CAN interrupt and corresponding NVIC of CAN */
+	/* Разрешение прерываний CAN и NVIC */
 	CAN_EnableInt(can->baddr, CAN_CON_IE_Msk | CAN_CON_SIE_Msk);
-	/* Install CAN call back functions */
 	NVIC_SetPriority(can->irq, (1 << __NVIC_PRIO_BITS) - 2);
 	NVIC_EnableIRQ(can->irq);
 
 	if (CAN_SetRxMsgObjAndMsk(can->baddr, MSG(0), CAN_STD_ID, 0x0, 0x0, FALSE) == FALSE)
-	//if (CAN_SetRxMsg(can->baddr, MSG(0), CAN_STD_ID, 0x7ff) == FALSE)
 	{
 		return 1;
 	}
@@ -181,41 +249,69 @@ uint8_t hw_can_setup(struct can_t * can, e_speed_t speed)
 	return 0;
 }
 
+/**
+ * @brief Установить скорость CAN-шины
+ * @param can   Указатель на структуру CAN
+ * @param speed Индекс скорости
+ * @return Всегда 0
+ */
 uint8_t hw_can_set_speed(struct can_t * can, e_speed_t speed)
 {
 	CAN_SetBaudRate(can->baddr, speeds[speed]);
 	return 0;
 }
 
+/**
+ * @brief Отключить CAN-интерфейс
+ * @param can Указатель на структуру CAN
+ *
+ * Закрывает CAN, сбрасывает модуль и отключает тактирование.
+ */
 void hw_can_disable(struct can_t * can)
 {
-	/* Disable CAN */
+	/* Отключение CAN */
 	CAN_Close(can->baddr);
 
-	/* Disable CAN Clock and Reset it */
+	/* Сброс модуля и отключение тактирования */
 	SYS_ResetModule(can->rst);
 	CLK_DisableModuleClock(can->clk);
 }
 
+/**
+ * @brief Очистить буфер принятых CAN-сообщений
+ * @param can Указатель на структуру CAN
+ */
 void hw_can_clr(struct can_t * can)
 {
 	can->nums = 0;
 	can->msgs_size = 0;
 }
 
+/**
+ * @brief Перевести CAN в режим сна
+ * @param can Указатель на структуру CAN
+ *
+ * Отключает CAN, устанавливает STBY в высокий уровень,
+ * настраивает PD6 как вход с прерыванием по спаду (для пробуждения).
+ */
 void hw_can_sleep(struct can_t * can)
 {
 	hw_can_disable(can);
 
 	hw_gpio_set(&can->stby);
 
-	/* Configure PD.6 as Input mode and enable interrupt by falling edge trigger */
+	/* PD.6 — вход, прерывание по спаду */
 	PD->PMD = (PD->PMD & (~GPIO_PMD_PMD6_Msk)) | (GPIO_PMD_QUASI << GPIO_PMD_PMD6_Pos);
 	PD->IMD |= (GPIO_IMD_EDGE << 6);
 	PD->IEN |= (BIT6 << GPIO_IEN_IF_EN_Pos);
 	NVIC_EnableIRQ(GPCDEF_IRQn);
 }
 
+/**
+ * @brief Обработчик прерывания портов C/D/E/F
+ *
+ * Сбрасывает флаги прерываний для всех портов.
+ */
 void GPCDEF_IRQHandler(void)
 {
 	PC->ISRC = PC->ISRC;
@@ -224,6 +320,13 @@ void GPCDEF_IRQHandler(void)
 	PF->ISRC = PF->ISRC;
 }
 
+/**
+ * @brief Передать CAN-сообщение
+ * @param can Указатель на структуру CAN
+ * @param msg Указатель на сообщение для передачи
+ *
+ * Копирует данные в структуру STR_CANMSG_T и передаёт через MSG(10).
+ */
 void hw_can_snd_msg(struct can_t * can, struct msg_can_t * msg)
 {
 	STR_CANMSG_T sMsg;
@@ -234,9 +337,6 @@ void hw_can_snd_msg(struct can_t * can, struct msg_can_t * msg)
 		sMsg.Data[i] = msg->data[i];
 
 	sMsg.IdType = CAN_STD_ID;
-	//if (msg->type & e_can_ext)
-	//	sMsg.IdType = CAN_EXT_ID;
 
 	CAN_Transmit(can->baddr, MSG(10), &sMsg);
 }
-

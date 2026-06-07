@@ -1,3 +1,10 @@
+<!--
+  @brief Главное окно приложения qCanBox
+
+  Содержит верхнюю панель с выбором COM-порта и протокола canbox,
+  сетку кнопок и слайдеров для управления виртуальным автомобилем,
+  а также встроенную панель отладочного журнала.
+-->
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>main</class>
@@ -14,13 +21,33 @@
    <string>qCanBox</string>
   </property>
   <widget class="QWidget" name="centralWidget">
+   <!--
+     @brief Главный вертикальный layout
+
+     Располагает элементы сверху вниз:
+     1. Панель COM-порта + выбор протокола
+     2. Сетка кнопок/слайдеров автомобиля
+     3. Отладочный журнал
+   -->
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
+     <!--
+       @brief Верхняя горизонтальная панель
+
+       Содержит виджет COM-порта, метку "CanBox", выпадающий список
+       протоколов, растягивающийся spacer и кнопку "О программе".
+     -->
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <property name="spacing">
        <number>10</number>
       </property>
       <item>
+       <!--
+         @brief Виджет управления COM-портом (wdg_com_t)
+
+         Встроенный пользовательский виджет для выбора порта
+         и открытия/закрытия соединения.
+       -->
        <widget class="wdg_com_t" name="wdg_com" native="true">
         <property name="minimumSize">
          <size>
@@ -38,9 +65,19 @@
        </widget>
       </item>
       <item>
+       <!--
+         @brief Выпадающий список протоколов canbox
+
+         Заполняется программно в main_t::main_t():
+         - Raise VW PQ
+         - Raise VW MQB
+         - OD BMW NBT EVO
+         - HiWorld VW MQB
+       -->
        <widget class="QComboBox" name="cb_canbox"/>
       </item>
       <item>
+       <!-- Растягивающийся spacer для выравнивания -->
        <spacer name="horizontalSpacer_3">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -54,6 +91,12 @@
        </spacer>
       </item>
       <item>
+       <!--
+         @brief Кнопка "О программе"
+
+         Открывает диалог с информацией о версии, ОС и авторе.
+         Иконка загружается из ресурсов (about.png).
+       -->
        <widget class="QToolButton" name="btn_about">
         <property name="text">
          <string>...</string>
@@ -73,8 +116,20 @@
      </layout>
     </item>
     <item>
+     <!--
+       @brief Сетка элементов управления виртуальным автомобилем
+
+       Располагает кнопки дверей, капота, багажника, ремня,
+       а также слайдеры тахометра, напряжения, скорости, топлива
+       и спинбокс температуры.
+     -->
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="0" column="2">
+       <!--
+         @brief Кнопка задней левой двери (RL)
+
+         Checkable-кнопка с иконкой. Состояние передается в qcar_state[e_rl_door].
+       -->
        <widget class="QPushButton" name="btn_door_rl">
         <property name="text">
          <string>DoorRL</string>
@@ -95,6 +150,11 @@
        </widget>
       </item>
       <item row="0" column="1">
+       <!--
+         @brief Кнопка передней правой двери (FR)
+
+         Checkable-кнопка с иконкой. Состояние передается в qcar_state[e_fr_door].
+       -->
        <widget class="QPushButton" name="btn_door_fr">
         <property name="text">
          <string>DoorFR</string>
@@ -115,6 +175,11 @@
        </widget>
       </item>
       <item row="0" column="0">
+       <!--
+         @brief Кнопка передней левой двери (FL)
+
+         Checkable-кнопка с иконкой. Состояние передается в qcar_state[e_fl_door].
+       -->
        <widget class="QPushButton" name="btn_door_fl">
         <property name="text">
          <string>DoorFL</string>
@@ -135,6 +200,11 @@
        </widget>
       </item>
       <item row="0" column="3">
+       <!--
+         @brief Кнопка задней правой двери (RR)
+
+         Checkable-кнопка с иконкой. Состояние передается в qcar_state[e_rr_door].
+       -->
        <widget class="QPushButton" name="btn_door_rr">
         <property name="text">
          <string>DoorRR</string>
@@ -171,6 +241,12 @@
        </widget>
       </item>
       <item row="3" column="1">
+       <!--
+         @brief Слайдер тахометра (обороты двигателя)
+
+         Диапазон: 0–6000 об/мин. Шаг меток: 1000.
+         Значение передается в carstate.rpm через прошивочный код.
+       -->
        <widget class="QSlider" name="slider_taho">
         <property name="maximum">
          <number>6000</number>
@@ -209,6 +285,11 @@
        </widget>
       </item>
       <item row="3" column="0">
+       <!--
+         @brief Слайдер напряжения бортовой сети
+
+         Диапазон: 0–255 (единицы — 0.1 В, т.е. до 25.5 В).
+       -->
        <widget class="QSlider" name="slider_voltage">
         <property name="maximum">
          <number>255</number>
@@ -238,6 +319,12 @@
        </widget>
       </item>
       <item row="3" column="2">
+       <!--
+         @brief Слайдер скорости автомобиля
+
+         Диапазон: 0–240 км/ч. Шаг меток: 60.
+         Значение передается в carstate.speed.
+       -->
        <widget class="QSlider" name="slider_speed">
         <property name="maximum">
          <number>240</number>
@@ -273,6 +360,12 @@
        </widget>
       </item>
       <item row="3" column="3">
+       <!--
+         @brief Слайдер уровня топлива
+
+         Диапазон: 0–100 %. Шаг меток: 25.
+         Значение передается в carstate.fuel.
+       -->
        <widget class="QSlider" name="slider_fuel">
         <property name="maximum">
          <number>100</number>
@@ -292,6 +385,12 @@
        </widget>
       </item>
       <item row="1" column="3">
+       <!--
+         @brief Панель температуры воздуха
+
+         Содержит метку "Air Temp" и спинбокс для ввода температуры
+         в диапазоне -40 … +40 °C.
+       -->
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
          <widget class="QLabel" name="label_6">
@@ -313,6 +412,11 @@
        </layout>
       </item>
       <item row="1" column="2">
+       <!--
+         @brief Кнопка ремня безопасности
+
+         Checkable-кнопка с иконкой. Состояние передается в qcar_state[e_belt].
+       -->
        <widget class="QPushButton" name="btn_belt">
         <property name="text">
          <string>Belt</string>
@@ -333,6 +437,11 @@
        </widget>
       </item>
       <item row="1" column="0">
+       <!--
+         @brief Кнопка капота
+
+         Checkable-кнопка с иконкой. Состояние передается в qcar_state[e_bonnet].
+       -->
        <widget class="QPushButton" name="btn_bonnet">
         <property name="text">
          <string>Bonnet</string>
@@ -353,6 +462,11 @@
        </widget>
       </item>
       <item row="1" column="1">
+       <!--
+         @brief Кнопка багажника
+
+         Checkable-кнопка с иконкой. Состояние передается в qcar_state[e_tailgate].
+       -->
        <widget class="QPushButton" name="btn_tailgate">
         <property name="text">
          <string>Tailgate</string>
@@ -375,14 +489,22 @@
      </layout>
     </item>
     <item>
+     <!--
+       @brief Встроенный отладочный виджет (wdg_dbg_t)
+
+       Отображает журнал обмена данными с возможностью фильтрации,
+       очистки и сохранения в файл.
+     -->
      <widget class="wdg_dbg_t" name="wdg_dbg"/>
     </item>
    </layout>
   </widget>
+  <!-- Стандартная статусная строка главного окна -->
   <widget class="QStatusBar" name="statusBar"/>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
+  <!-- Объявление пользовательских виджетов для Qt Designer -->
   <customwidget>
    <class>wdg_com_t</class>
    <extends>QWidget</extends>

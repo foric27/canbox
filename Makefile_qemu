@@ -1,3 +1,6 @@
+# Список объектных файлов платформенного слоя QEMU (эмулятор)
+# Реализация hw_*.h API для QEMU: clock, CAN, GPIO, tick, USART, sleep, conf
+# Эти файлы содержат заглушки (stubs) вместо реального обращения к регистрам MCU
 QEMU_OBJS = out/qemu/fw/hw_clock.qemu \
 		out/qemu/fw/hw_can.qemu \
 		out/qemu/fw/hw_gpio.qemu \
@@ -6,14 +9,34 @@ QEMU_OBJS = out/qemu/fw/hw_clock.qemu \
 		out/qemu/fw/hw_sleep.qemu \
 		out/qemu/fw/hw_conf.qemu
 
+# Правило компиляции .c → .qemu (QEMU target)
+# Расширение .qemu — уникально для эмулятора, предотвращает конфликты с .vo и .vwo
+# Используются флаги F103_CFLAGS (Cortex-M3), т.к. QEMU эмулирует STM32F100RB (Cortex-M3)
 out/%.qemu : %.c
 	mkdir -p $(dir $@)
 	$(CC) $(F103_CFLAGS) -c $< -o $@
 
+# Цель сборки прошивки QEMU: ELF → BIN
+# Зависимости:
+#   - Общие core-файлы (.qemu): main, canbox, ring, car, tick, hw, sbrk
+#   - Платформенные файлы QEMU ($(QEMU_OBJS))
+#   - Библиотека libopencm3 ($(LIBOPENCM3_OBJS))
+# Линковка: используется скрипт линкера qemu/fw/stm32vldiscovery.ld
+#   (для платы STM32VLDISCOVERY с STM32F100RB, 128K flash)
+# Флаги: F103_LDFLAGS + путь к библиотекам libopencm3
+# Выход: out/qemu.elf + map-файл, затем конвертация в raw binary
 out/qemu.bin: out/main.qemu out/canbox.qemu out/ring.qemu out/car.qemu out/tick.qemu out/hw.qemu out/sbrk.qemu $(QEMU_OBJS) $(LIBOPENCM3_OBJS)
 	$(CC) $^ -L. -Tqemu/fw/stm32vldiscovery.ld -L$(LIBOPENCM3_DIR)/lib/stm32/f1 $(F103_LDFLAGS) $(F103_INCLUDES) -Wl,-Map=out/qemu.map -o out/qemu.elf
 	$(OBJCOPY) -O binary out/qemu.elf $@
 
+# Цель запуска прошивки в QEMU (эмулятор STM32)
+# Предварительно сбрасывает терминал (reset 2>/dev/null || true) для чистого вывода
+# Параметры QEMU:
+#   -M stm32vldiscovery: машина STM32VLDISCOVERY (STM32F100RB)
+#   -kernel out/qemu.bin: загрузка прошивки
+#   -serial stdio: перенаправление USART на stdout/stdin
+#   -display none: без графического окна (headless)
+# Требуется: QEMU с патчем для эмуляции USART STM32 (qemu-7.2.0-fix.diff)
 run_qemu: out/qemu.bin
 	-reset 2>/dev/null || true
 	$(QEMU_STM32) -M stm32vldiscovery -kernel out/qemu.bin -serial stdio -display none

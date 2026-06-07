@@ -1,3 +1,10 @@
+<!--
+  @brief Панель отладочного журнала
+
+  Содержит выпадающий список для выбора уровня логирования,
+  кнопки очистки и сохранения журнала, а также текстовое поле
+  для отображения сообщений.
+-->
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>dbg</class>
@@ -13,6 +20,11 @@
   <property name="windowTitle">
    <string>dbg</string>
   </property>
+  <!--
+    @brief Главный вертикальный layout с нулевыми отступами
+
+    Располагает панель управления (уровень + кнопки) и текстовое поле лога.
+  -->
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="leftMargin">
     <number>0</number>
@@ -27,6 +39,12 @@
     <number>0</number>
    </property>
    <item>
+    <!--
+      @brief Горизонтальная панель управления журналом
+
+      Содержит метку "Log level", выпадающий список фильтра,
+      растягивающийся spacer, кнопки "Clear log" и "Save log".
+    -->
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QLabel" name="label_5">
@@ -36,9 +54,16 @@
       </widget>
      </item>
      <item>
+      <!--
+        @brief Выпадающий список уровней логирования
+
+        Заполняется программно в wdg_dbg_t::wdg_dbg_t():
+        Warn, Status, Info, Debug, All.
+      -->
       <widget class="QComboBox" name="cb_level"/>
      </item>
      <item>
+      <!-- Растягивающийся spacer для выравнивания кнопок вправо -->
       <spacer name="horizontalSpacer">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -52,6 +77,11 @@
       </spacer>
      </item>
      <item>
+      <!--
+        @brief Кнопка очистки журнала
+
+        Вызывает wdg_dbg_t::slt_btn_clr() — очищает содержимое log.
+      -->
       <widget class="QPushButton" name="btn_clr">
        <property name="text">
         <string>Clear log</string>
@@ -63,6 +93,12 @@
       </widget>
      </item>
      <item>
+      <!--
+        @brief Кнопка сохранения журнала в файл
+
+        Вызывает wdg_dbg_t::slt_btn_save() — открывает QFileDialog
+        и записывает содержимое log в выбранный файл .txt.
+      -->
       <widget class="QPushButton" name="btn_save">
        <property name="text">
         <string>Save log</string>
@@ -76,6 +112,12 @@
     </layout>
    </item>
    <item>
+    <!--
+      @brief Текстовое поле отладочного журнала
+
+      QPlainTextEdit с минимальной высотой 64 пикселя.
+      Отображает сообщения с временными метками и цветовой маркировкой.
+    -->
     <widget class="QPlainTextEdit" name="log">
      <property name="minimumSize">
       <size>

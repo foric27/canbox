@@ -1,18 +1,53 @@
+# Директория с BSP (Board Support Package) для Nuvoton NUC131 (Cortex-M0)
+# Содержит драйверы CMSIS, startup-код и стандартные драйверы периферии
 NUC131_BSP_DIR = nuc131bsp
+
+# Пути include для NUC131 BSP
+# - CMSIS core headers (аппаратная абстракция Cortex-M0)
+# - Заголовки периферии NUC131 (регистры, битовые маски)
+# - Заголовки стандартных драйверов (sys, clk, gpio, uart, can, fmc)
 NUC131_BSP_INCLUDES=-I$(NUC131_BSP_DIR)/Library/CMSIS/Include  -I$(NUC131_BSP_DIR)/Library/Device/Nuvoton/NUC131/Include -I$(NUC131_BSP_DIR)/Library/StdDriver/inc
+
+# Архитектурные флаги компиляции для NUC131 (Cortex-M0)
+# -mcpu=cortex-m0: целевой процессор Cortex-M0
+# -mthumb: только Thumb-инструкции (Cortex-M0 не поддерживает ARM-режим)
+# -msoft-float: программная эмуляция FPU (Cortex-M0 нет FPU)
+# -Wall: все основные предупреждения компилятора
 NUC131_COMMON_FLAGS=-mcpu=cortex-m0 -mthumb -msoft-float -Wall
+
+# Полный набор include-путей для VW NC03
+# Объединяет общие include (include/) и include NUC131 BSP
 NUC131_INCLUDES=$(COMMON_INCLUDES) $(NUC131_BSP_INCLUDES)
+
+# Полные флаги компиляции C для NUC131 (VW NC03)
+# $(NUC131_COMMON_FLAGS): архитектурные флаги Cortex-M0
+# $(NUC131_INCLUDES): пути к заголовкам
+# $(COMMON_CFLAGS): общие флаги оптимизации/предупреждений из корневого Makefile
 NUC131_CFLAGS=$(NUC131_COMMON_FLAGS) $(NUC131_INCLUDES) $(COMMON_CFLAGS)
+
+# Полные флаги линковщика для NUC131
+# $(NUC131_COMMON_FLAGS): архитектурные флаги для выбора multilib newlib
+# $(COMMON_LDFLAGS): общие флаги статической линковки
 NUC131_LDFLAGS=$(NUC131_COMMON_FLAGS) $(COMMON_LDFLAGS)
 
+# Правило компиляции .c → .vwo (VW NC03, NUC131)
+# Расширение .vwo (VW Object) — уникально для NUC131-цели,
+# предотвращает конфликты с .vo (Volvo) и .qemu при параллельной сборке
 out/%.vwo : %.c
 	mkdir -p $(dir $@)
 	$(CC) $(NUC131_CFLAGS) -c $< -o $@
 
+# Правило компиляции ассемблерных .S → .vwo (startup-код NUC131)
+# startup_NUC131.S содержит векторную таблицу и обработчик Reset_Handler
+# Компилируется теми же флагами C, т.к. GNU as поддерживает препроцессор C через -c
 out/%.vwo : %.S
 	mkdir -p $(dir $@)
 	$(CC) $(NUC131_CFLAGS) -c $< -o $@
 
+# Список объектных файлов BSP NUC131
+# Стандартные драйверы: sys, clk, gpio, uart, can, fmc
+# system_NUC131.c: инициализация системных часов (SystemInit)
+# startup_NUC131.S: векторная таблица и startup-код (precompiled в оригинале, здесь из исходников)
 NUC131_BSP_OBJS = out/$(NUC131_BSP_DIR)/Library/StdDriver/src/sys.vwo \
 		out/$(NUC131_BSP_DIR)/Library/StdDriver/src/clk.vwo \
 		out/$(NUC131_BSP_DIR)/Library/StdDriver/src/gpio.vwo \
@@ -22,6 +57,8 @@ NUC131_BSP_OBJS = out/$(NUC131_BSP_DIR)/Library/StdDriver/src/sys.vwo \
 		out/$(NUC131_BSP_DIR)/Library/Device/Nuvoton/NUC131/Source/system_NUC131.vwo \
 		out/$(NUC131_BSP_DIR)/Library/Device/Nuvoton/NUC131/Source/GCC/startup_NUC131.vwo
 
+# Список объектных файлов платформенного слоя VW NC03 (NUC131)
+# Реализация hw_*.h API для Nuvoton NUC131: clock, CAN, GPIO, tick, USART, sleep, conf
 VW_NC03_OBJS = out/vw_nc03/fw/hw_clock.vwo \
 		out/vw_nc03/fw/hw_can.vwo \
 		out/vw_nc03/fw/hw_gpio.vwo \
@@ -30,14 +67,34 @@ VW_NC03_OBJS = out/vw_nc03/fw/hw_clock.vwo \
 		out/vw_nc03/fw/hw_sleep.vwo \
 		out/vw_nc03/fw/hw_conf.vwo
 
+# Цель сборки прошивки VW NC03: ELF → BIN
+# Зависимости:
+#   - Общие core-файлы (.vwo): main, canbox, ring, car, tick, hw, sbrk
+#   - Платформенные файлы VW NC03 ($(VW_NC03_OBJS))
+#   - Библиотека BSP NUC131 ($(NUC131_BSP_OBJS))
+# Линковка: используется скрипт линкера gcc_arm.ld из BSP
+# Флаги: NUC131_LDFLAGS + include-пути
+# Выход: out/vw_nc03.elf + map-файл, затем конвертация в raw binary
 out/vw_nc03.bin: out/main.vwo out/canbox.vwo out/ring.vwo out/car.vwo out/tick.vwo out/hw.vwo out/sbrk.vwo $(VW_NC03_OBJS) $(NUC131_BSP_OBJS)
 	$(CC) $^ -L. -T$(NUC131_BSP_DIR)/Library/Device/Nuvoton/NUC131/Source/GCC/gcc_arm.ld $(NUC131_LDFLAGS) $(NUC131_INCLUDES) -Wl,-Map=out/vw_nc03.map -o out/vw_nc03.elf
 	$(OBJCOPY) -O binary out/vw_nc03.elf $@
 
+# Цель прошивки VW NC03 через OpenOCD (патченный для NUC131)
+# Процедура:
+#   1. init + reset halt — остановка ядра
+#   2. numicro chip_erase — полное стирание flash NUC131
+#   3. program out/vw_nc03.bin 0x0 verify — запись и верификация с адреса 0x00000000
+#   4. reset — перезапуск MCU
+# Требуется: OpenOCD с поддержкой Nuvoton NUC131 (патч openocd-fix.diff)
 flash_vw_nc03: out/vw_nc03.bin
 	$(OPENOCD_NUVOTON) -f vw_nc03/fw/nuc131.cfg -c "init; reset halt; numicro chip_erase;program out/vw_nc03.bin 0x0 verify; reset;exit"
 
+# Цель тестирования подключения к NUC131 через OpenOCD
+# Читает регистры:
+#   0xe000ed00 — CPUID (идентификатор процессора Cortex-M0)
+#   0x50000000 — базовый адрес периферии (зависит от конкретного устройства)
+# Выводит список targets и состояние ядра
+# Полезно для проверки правильности подключения JTAG/SWD
 test_nuc:
 	$(OPENOCD_NUVOTON) -f vw_nc03/fw/nuc131.cfg -c "init; targets; halt; targets; mdw 0xe000ed00; mdw 0x50000000; reset; exit"
-
 

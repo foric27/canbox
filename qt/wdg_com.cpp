@@ -5,6 +5,14 @@
 #include "wdg_com.h"
 #include "log_levels.h"
 
+/**
+ * @brief Конструктор виджета COM-порта
+ * @param parent Родительский виджет
+ *
+ * Заполняет выпадающий список доступными COM-портами системы,
+ * устанавливает иконку "отключено" и связывает сигналы кнопки и порта
+ * с соответствующими слотами.
+ */
 wdg_com_t::wdg_com_t(QWidget * parent) : QWidget(parent), ui(new Ui::com)
 {
 	ui->setupUi(this);
@@ -23,11 +31,21 @@ wdg_com_t::wdg_com_t(QWidget * parent) : QWidget(parent), ui(new Ui::com)
 	connect(&sp, SIGNAL(error(QSerialPort::SerialPortError)), this, SLOT(slt_error(QSerialPort::SerialPortError)));
 }
 
+/**
+ * @brief Деструктор
+ */
 wdg_com_t::~wdg_com_t()
 {
-	//stop();
 }
 
+/**
+ * @brief Обработка ошибок последовательного порта
+ * @param error Код ошибки QSerialPort
+ *
+ * Логирует любую ошибку, отличную от NoError.
+ * При критической ошибке ResourceError (отключение устройства)
+ * автоматически вызывает stop() для закрытия порта.
+ */
 void wdg_com_t::slt_error(QSerialPort::SerialPortError error)
 {
 	if (error != QSerialPort::NoError)
@@ -37,6 +55,13 @@ void wdg_com_t::slt_error(QSerialPort::SerialPortError error)
 		stop();
 }
 
+/**
+ * @brief Открытие или закрытие COM-порта
+ *
+ * Если порт уже открыт — закрывает его (вызывает stop()).
+ * Иначе настраивает параметры 38400 8N1, открывает порт в режиме
+ * ReadWrite, устанавливает DTR и меняет иконку на "подключено".
+ */
 void wdg_com_t::slt_open()
 {
 	if (sp.isOpen()) {
@@ -73,6 +98,13 @@ void wdg_com_t::slt_open()
 	}
 }
 
+/**
+ * @brief Чтение данных из COM-порта
+ *
+ * Вызывается сигналом readyRead от QSerialPort.
+ * Читает все доступные байты, формирует hex-строку для лога
+ * и передает QByteArray через sig_msg для обработки протоколом canbox.
+ */
 void wdg_com_t::serial_read_cb()
 {
 	if (!sp.bytesAvailable())
@@ -88,6 +120,12 @@ void wdg_com_t::serial_read_cb()
 	emit sig_msg(msg);
 }
 
+/**
+ * @brief Закрытие COM-порта и сброс интерфейса
+ *
+ * Закрывает QSerialPort, возвращает иконку "отключено",
+ * меняет текст кнопки на "Open" и emits sig_closed.
+ */
 void wdg_com_t::stop()
 {
 	emit sig_log(e_log_info, "close comport");
@@ -100,6 +138,13 @@ void wdg_com_t::stop()
 	emit sig_closed();
 }
 
+/**
+ * @brief Передача данных в открытый COM-порт
+ * @param msg Байтовый массив для отправки
+ *
+ * Если порт не открыт — вызов игнорируется.
+ * Иначе данные логируются в hex и записываются в QSerialPort.
+ */
 void wdg_com_t::slt_msg(const QByteArray & msg)
 {
 	if (!sp.isOpen())
@@ -112,4 +157,3 @@ void wdg_com_t::slt_msg(const QByteArray & msg)
 
 	sp.write(msg);
 }
-

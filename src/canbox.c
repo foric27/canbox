@@ -13,6 +13,12 @@
 #include "canbox_protos/canbox_hiworld_vw_mqb.c"
 #endif
 
+/**
+ * @brief Диспетчер основного цикла протокола canbox
+ * @note Вызывает соответствующую функцию обработки в зависимости от
+ *       выбранного протокола (Raise VW PQ/MQB, Oudi BMW, HiWorld).
+ *       Отправляет состояние автомобиля на Android-устройство по USART.
+ */
 void canbox_process(void)
 {
 #if defined(USE_RAISE_VW_PQ)
@@ -26,6 +32,12 @@ void canbox_process(void)
 #endif
 }
 
+/**
+ * @brief Диспетчер парковочных данных протокола canbox
+ * @note Вызывает соответствующую функцию отправки парковочных данных
+ *       (радар, датчики расстояния) в зависимости от выбранного протокола.
+ *       Выполняется с периодичностью 100 мс.
+ */
 void canbox_park_process(void)
 {
 #if defined(USE_RAISE_VW_PQ)

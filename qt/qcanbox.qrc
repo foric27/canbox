@@ -1,3 +1,14 @@
+<!--
+  @brief Файл ресурсов Qt (qcanbox.qrc)
+
+  Включает PNG-иконки для элементов интерфейса эмулятора:
+  - connect.png / disconnect.png — состояние COM-порта
+  - about.png — кнопка "О программе"
+  - fl_door.png, fr_door.png, rl_door.png, rr_door.png — двери
+  - belt.png — ремень безопасности
+  - bonnet.png — капот
+  - tailgate.png — багажник
+-->
 <RCC>
     <qresource prefix="/">
 	<file>images/connect.png</file>

@@ -1,3 +1,9 @@
+<!--
+  @brief Панель выбора COM-порта
+
+  Содержит метку "Port", выпадающий список доступных портов
+  и кнопку открытия/закрытия соединения с иконкой состояния.
+-->
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>com</class>
@@ -13,8 +19,14 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <!--
+    @brief Горизонтальный layout панели COM-порта
+
+    Располагает элементы в строку: метка, выпадающий список, кнопка.
+  -->
   <layout class="QHBoxLayout" name="horizontalLayout_2">
    <item>
+    <!-- Метка перед выпадающим списком портов -->
     <widget class="QLabel" name="lb_com">
      <property name="text">
       <string>Port</string>
@@ -22,9 +34,23 @@
     </widget>
    </item>
    <item>
+    <!--
+      @brief Выпадающий список COM-портов
+
+      Заполняется программно в wdg_com_t::wdg_com_t() из QSerialPortInfo::availablePorts().
+      Пользователь выбирает порт перед нажатием кнопки Open.
+    -->
     <widget class="QComboBox" name="cb_port"/>
    </item>
    <item>
+    <!--
+      @brief Кнопка открытия/закрытия COM-порта
+
+      Текст кнопки и иконка меняются программно:
+      - "Open" + disconnect.png — порт закрыт
+      - "Close" + connect.png — порт открыт
+      Вызывает wdg_com_t::slt_open().
+    -->
     <widget class="QPushButton" name="btn_open">
      <property name="text">
       <string>Open</string>

@@ -1,3 +1,6 @@
+# Список объектных файлов платформенного слоя Volvo OD2 (STM32F103)
+# Каждый .vo файл — результат компиляции соответствующего hw_*.c из volvo_od2/fw/
+# Эти файлы реализуют абстракцию железа (hw_*.h API) для конкретного MCU
 VOLVO_OD2_OBJS = out/volvo_od2/fw/hw_clock.vo \
 		out/volvo_od2/fw/hw_can.vo \
 		out/volvo_od2/fw/hw_gpio.vo \
@@ -6,16 +9,39 @@ VOLVO_OD2_OBJS = out/volvo_od2/fw/hw_clock.vo \
 		out/volvo_od2/fw/hw_sleep.vo \
 		out/volvo_od2/fw/hw_conf.vo
 
+# Правило компиляции .c → .vo (Volvo OD2, STM32F1)
+# Расширение .vo (Volvo Object) предотвращает конфликты с .vwo (VW) и .qemu
+# Используются флаги F103_CFLAGS (Cortex-M3, STM32F1, libopencm3)
 out/%.vo : %.c
 	mkdir -p $(dir $@)
 	$(CC) $(F103_CFLAGS) -c $< -o $@
 
+# Цель сборки прошивки Volvo OD2: ELF → BIN
+# Зависимости:
+#   - Общие core-файлы (.vo): main, canbox, ring, car, tick, hw, sbrk
+#   - Платформенные файлы Volvo OD2 ($(VOLVO_OD2_OBJS))
+#   - Библиотека libopencm3 ($(LIBOPENCM3_OBJS))
+# Линковка: используется скрипт линкера volvo_od2/fw/x32f103x8.ld (для X32F103x8 — совместимый с STM32F103)
+# Флаги: F103_LDFLAGS + путь к библиотекам libopencm3
+# Выход: out/volvo_od2.elf, затем конвертация в raw binary (.bin)
 out/volvo_od2.bin: out/main.vo out/canbox.vo out/ring.vo out/car.vo out/tick.vo out/hw.vo out/sbrk.vo $(VOLVO_OD2_OBJS) $(LIBOPENCM3_OBJS)
 	$(CC) $^ -L. -Tvolvo_od2/fw/x32f103x8.ld -L$(LIBOPENCM3_DIR)/lib/stm32/f1 $(F103_LDFLAGS) $(F103_INCLUDES) -Wl,-Map=out/volvo_od2.map -o out/volvo_od2.elf
 	$(OBJCOPY) -O binary out/volvo_od2.elf $@
 
+# Цель прошивки Volvo OD2 через OpenOCD (3-этапная процедура RDP-разблокировки)
+# 
+# Этап 1 (строки 17-18): Разблокировка RDP (Read Protection) через регистры FLASH
+#   Запись ключей в FLASH_KEYR (0x40022004) и FLASH_OPTKEYR (0x40022008)
+#   Снятие защиты OPTWRE → стирание опциональных байтов → проверка
+# 
+# Этап 2 (строки 19-20): Повторная разблокировка (резервная)
+# 
+# Этап 3 (строка 20): Собственно прошивка
+#   Чтение ID чипа, проверка опциональных байтов, разблокировка,
+#   стирание, программирование out/volvo_od2.bin по адресу 0x08000000, reset
+#
+# ВАЖНО: RDP-разблокировка стирает весь flash! Сохраняйте данные перед прошивкой.
 flash_volvo_od2: out/volvo_od2.bin
 	$(OPENOCD_STM32) -f volvo_od2/fw/stm32f103x8.cfg -c "init; reset halt" -c "mww 0x40022004 0x45670123" -c "mww 0x40022004 0xCDEF89AB" -c "mww 0x40022008 0x45670123" -c "mww 0x40022008 0xCDEF89AB" -c "mww 0x40022010 0x220" -c "mww 0x40022010 0x260" -c "sleep 100" -c "mww 0x40022010 0x230" -c "mwh 0x1ffff800 0x5AA5" -c "sleep 1000" -c "mww 0x40022010 0x2220" -c "sleep 100" -c "mdw 0x40022010" -c "mdw 0x4002201c" -c "mdw 0x1ffff800" -c targets -c "halt" -c "stm32f1x unlock 0;exit"
 	$(OPENOCD_STM32) -f volvo_od2/fw/stm32f103x8.cfg -c "init; reset halt" -c "mww 0x40022004 0x45670123" -c "mww 0x40022004 0xCDEF89AB" -c "mww 0x40022008 0x45670123" -c "mww 0x40022008 0xCDEF89AB" -c targets -c "halt" -c "stm32f1x unlock 0; exit"
 	$(OPENOCD_STM32) -f volvo_od2/fw/stm32f103x8.cfg -c "init; mdw 0x1ffff7e0; mdw 0x1ffff800; reset halt; stm32f1x unlock 0; sleep 1; program out/volvo_od2.bin 0x8000000; reset;exit"
-

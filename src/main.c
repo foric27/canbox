@@ -10,10 +10,19 @@
 #include "canbox.h"
 #include "config.h"
 
+/** @brief Счетчик задержки выключения заднего хода (в тиках) */
 static uint32_t rear_off_delay = 0;
+/** @brief Счетчик задержки включения заднего хода (в тиках) */
 static uint32_t rear_on_delay = 0;
+/** @brief Таймаут подтверждения включения заднего хода (мс) */
 static uint32_t rear_on_timeout = 200;
 
+/**
+ * @brief Обработка задержки заднего хода
+ * @param ticks Количество миллисекунд с момента последнего вызова
+ * @note Управляет логикой задержки включения/выключения заднего хода
+ *       для предотвращения дребезга при переключении селектора
+ */
 static void rear_delay_process(uint8_t ticks)
 {
 	uint8_t rear_state = (e_selector_r == car_get_selector()) ? 1 : 0;
@@ -31,6 +40,12 @@ static void rear_delay_process(uint8_t ticks)
 	}
 }
 
+/**
+ * @brief Получить состояние задержки заднего хода
+ * @return 1 — задний ход активен или находится в задержке выключения,
+ *         0 — задний ход неактивен
+ * @note Учитывает состояние зажигания: при выключенном зажигании всегда 0
+ */
 uint8_t get_rear_delay_state(void)
 {
 	uint8_t ign = car_get_ign();
@@ -43,6 +58,7 @@ uint8_t get_rear_delay_state(void)
 		return 0;
 }
 
+/** @brief Структура обратных вызовов для кнопок рулевого управления */
 struct key_cb_t key_cb =
 {
 	.mode = canbox_mode,
@@ -55,6 +71,11 @@ struct key_cb_t key_cb =
 	.mici = canbox_mici,
 };
 
+/**
+ * @brief Обработка входящих данных по USART
+ * @note Считывает один байт из кольцевого буфера RX и передает
+ *       в парсер протокола canbox
+ */
 static void usart_process(void)
 {
 	uint8_t ch = 0;
@@ -64,6 +85,13 @@ static void usart_process(void)
 	canbox_rx_process(ch);
 }
 
+/**
+ * @brief Обработка состояния GPIO
+ * @note Управляет выходными линиями в зависимости от состояния автомобиля:
+ *       - ACC (доступность аксессуаров)
+ *       - Подсветка (illumination)
+ *       - Задний ход (с задержкой)
+ */
 static void gpio_process(void)
 {
 	uint8_t acc = car_get_acc();
@@ -85,6 +113,17 @@ static void gpio_process(void)
 		hw_gpio_rear_off();
 }
 
+/**
+ * @brief Точка входа в прошивку
+ * @return Никогда не возвращает управление
+ * @note Инициализирует оборудование и автомобиль, затем входит
+ *       в бесконечный цикл с диспетчеризацией задач по таймерным доменам:
+ *       - 1 мс: обработка задержки заднего хода
+ *       - 5 мс: обработка CAN-сообщений
+ *       - 100 мс: отправка парковочных данных
+ *       - 250 мс: отправка состояния автомобиля
+ *       - 1000 мс: мониторинг активности CAN-шины и сон
+ */
 int main(void)
 {
 	hw_setup();

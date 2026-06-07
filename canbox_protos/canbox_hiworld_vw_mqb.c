@@ -1,16 +1,34 @@
-/*
- * canbox_hiworld_vw_mqb.c — HiWorld VW(MQB) protocol
+/**
+ * @file canbox_hiworld_vw_mqb.c
+ * @brief Протокол HiWorld VW (MQB) для Android-головного устройства
  *
- * Fully self-contained. All symbols static except public API.
+ * Полностью самодостаточный файл. Все символы static, кроме публичного API.
+ * Компилируется через #include внутри src/canbox.c.
+ * Использует собственный формат пакетов с префиксом 0x5A 0xA5.
  */
 
 #include <string.h>
 
+/**
+ * @brief Линейное масштабирование значения из одного диапазона в другой
+ * @param value Входное значение
+ * @param in_min Минимум входного диапазона
+ * @param in_max Максимум входного диапазона
+ * @param out_min Минимум выходного диапазона
+ * @param out_max Максимум выходного диапазона
+ * @return Масштабированное значение
+ */
 static float scale(float value, float in_min, float in_max, float out_min, float out_max)
 {
 	return (((value - in_min) * (out_max - out_min)) / (in_max - in_min)) + out_min;
 }
 
+/**
+ * @brief Расчёт контрольной суммы для протокола HiWorld
+ * @param buf Указатель на буфер данных
+ * @param len Длина буфера
+ * @return Контрольная сумма (сумма всех байтов минус 1)
+ */
 static uint8_t canbox_hiworld_checksum(uint8_t * buf, uint8_t len)
 {
 	uint8_t sum = 0;
@@ -20,6 +38,15 @@ static uint8_t canbox_hiworld_checksum(uint8_t * buf, uint8_t len)
 	return sum;
 }
 
+/**
+ * @brief Отправка сообщения по протоколу HiWorld
+ * @param type Тип сообщения (байт команды)
+ * @param msg Указатель на данные
+ * @param size Размер данных
+ *
+ * Формирует пакет: [0x5A][0xA5][длина][тип][данные...][чексумма]
+ * Отправляет через hw_usart_write().
+ */
 static void snd_canbox_hiworld_msg(uint8_t type, uint8_t * msg, uint8_t size)
 {
 	uint8_t buf[5 + size];
@@ -32,6 +59,17 @@ static void snd_canbox_hiworld_msg(uint8_t type, uint8_t * msg, uint8_t size)
 	hw_usart_write(hw_usart_get(), buf, sizeof(buf));
 }
 
+/**
+ * @brief Отправка данных о положении рулевого колеса и состоянии парковки
+ *
+ * Формирует пакет 0x11, 10 байт:
+ * - [0]: бит 5 — активен ли парковочный режим
+ * - [4]: 0x03 при парковке, иначе 0x00
+ * - [6..7]: угол поворота руля (big-endian, масштаб -540..540)
+ *
+ * Получает угол руля через car_get_wheel() и состояние радара через car_get_radar().
+ * Отправляет данные только при изменении состояния парковки или при активном парковочном режиме.
+ */
 static void canbox_hiworld_vw_mqb_wheel_process(void)
 {
 	int16_t wmin = -540;
@@ -60,6 +98,18 @@ static void canbox_hiworld_vw_mqb_wheel_process(void)
 	}
 }
 
+/**
+ * @brief Отправка данных парктроника (радар)
+ *
+ * Формирует пакет 0x41, 12 байт — расстояния до препятствий для всех 8 датчиков.
+ * Порядок: RL, RLM, RRM, RR, FR, FRM, FLM, FL.
+ *
+ * Диапазон масштабирования зависит от положения селектора:
+ * - задний ход (e_selector_r): pmax = 165, pstart = 1
+ * - остальные: pmax = 250, pstart = 5
+ *
+ * Использует car_get_radar() и car_get_selector().
+ */
 static void canbox_hiworld_vw_mqb_radar_process(void)
 {
 	uint8_t pmax = (e_selector_r == car_get_selector()) ? 165 : 250;
@@ -86,6 +136,20 @@ static void canbox_hiworld_vw_mqb_radar_process(void)
 	}
 }
 
+/**
+ * @brief Отправка данных о состоянии дверей (HiWorld-формат)
+ *
+ * Формирует пакет 0x12, 7 байт:
+ * - [2]: битовая маска дверей:
+ *   - бит 2: капот
+ *   - бит 3: багажник
+ *   - бит 4: задняя правая дверь
+ *   - бит 5: задняя левая дверь
+ *   - бит 6: передняя правая дверь
+ *   - бит 7: передняя левая дверь
+ *
+ * Использует car_get_door_*(), car_get_tailgate(), car_get_bonnet().
+ */
 static void canbox_hiworld_vw_mqb_door_process(void)
 {
 	uint8_t fl_door = car_get_door_fl();
@@ -114,24 +178,71 @@ static void canbox_hiworld_vw_mqb_door_process(void)
 	snd_canbox_hiworld_msg(0x12, data, sizeof(data));
 }
 
-/*
- * SWC key callbacks — empty stubs (HiWorld does not use SWC via canbox)
+/**
+ * @brief Callback: кнопка "громкость +" на руле (заглушка)
+ * @param val Величина изменения громкости (игнорируется)
+ *
+ * Для протокола HiWorld SWC не используется через canbox.
  */
 void canbox_inc_volume(uint8_t val) { (void)val; }
+
+/**
+ * @brief Callback: кнопка "громкость -" на руле (заглушка)
+ * @param val Величина изменения громкости (игнорируется)
+ *
+ * Для протокола HiWorld SWC не используется через canbox.
+ */
 void canbox_dec_volume(uint8_t val) { (void)val; }
+
+/**
+ * @brief Callback: кнопка "предыдущий трек" на руле (заглушка)
+ *
+ * Для протокола HiWorld SWC не используется через canbox.
+ */
 void canbox_prev(void) { }
+
+/**
+ * @brief Callback: кнопка "следующий трек" на руле (заглушка)
+ *
+ * Для протокола HiWorld SWC не используется через canbox.
+ */
 void canbox_next(void) { }
+
+/**
+ * @brief Callback: кнопка "режим" (MODE) на руле (заглушка)
+ *
+ * Для протокола HiWorld SWC не используется через canbox.
+ */
 void canbox_mode(void) { }
+
+/**
+ * @brief Callback: кнопка "продолжить/пауза" на руле (заглушка)
+ *
+ * Для протокола HiWorld SWC не используется через canbox.
+ */
 void canbox_cont(void) { }
+
+/**
+ * @brief Callback: кнопка "голосовой ввод / микрофон" на руле (заглушка)
+ *
+ * Для протокола HiWorld SWC не используется через canbox.
+ */
 void canbox_mici(void) { }
 
-/*
- * RX state machine — empty stub (HiWorld does not use Raise RX)
+/**
+ * @brief Публичный API: обработка входящего байта с USART (заглушка)
+ * @param ch Полученный байт (игнорируется)
+ *
+ * Для протокола HiWorld RX state machine не используется.
  */
 void canbox_rx_process(uint8_t ch) { (void)ch; }
 
-/*
- * Entry points
+/**
+ * @brief Точка входа основного цикла (250 мс)
+ *
+ * Вызывает:
+ * - canbox_hiworld_vw_mqb_wheel_process() — руль + парковка
+ * - canbox_hiworld_vw_mqb_door_process() — двери
  */
 static void canbox_hiworld_vw_mqb_process(void)
 {
@@ -139,6 +250,11 @@ static void canbox_hiworld_vw_mqb_process(void)
 	canbox_hiworld_vw_mqb_door_process();
 }
 
+/**
+ * @brief Точка входа цикла парктроника (100 мс)
+ *
+ * Вызывает canbox_hiworld_vw_mqb_radar_process() — данные парктроника.
+ */
 static void canbox_hiworld_vw_mqb_park_process(void)
 {
 	canbox_hiworld_vw_mqb_radar_process();

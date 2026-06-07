@@ -1,4 +1,20 @@
-// CAN COMFORT
+/**
+ * @brief Обработчик CAN-сообщения ID 0x2C3 (ACC и зажигание)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит:
+ *   - msg[0] & 0x01 — ACC (аксессуары)
+ *   - msg[0] & 0x02 — IGN (зажигание)
+ *
+ * Вызывает: обновление carstate.acc, carstate.ign
+ *
+ * @note Примеры значений msg[0]:
+ *       0x10 — ключ не вставлен
+ *       0x01 — ключ вставлен, зажигание выключено
+ *       0x07 — зажигание включено
+ *       0x0B — стартер
+ */
 static void q3_2015_ms_2c3_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -7,13 +23,6 @@ static void q3_2015_ms_2c3_handler(const uint8_t * msg, struct msg_desc_t * desc
 		carstate.ign = STATE_UNDEF;
 		return;
 	}
-
-	/*
-	   0001 0000 - 0x2C3 : 10 00 00 00 00 00 00 00 - no Key
-	   0000 0001 - 0x2C3 : 01 FF FF FF FF FF FF FF - Key inserted, IGN off
-	   0000 0111 - 0x2C3 : 07 FF FF FF FF FF FF FF - Ign on
-	   0111 1011 - 0x2C3 : 0B FF FF FF FF FF FF FF - Starter
-	*/
 
 	if (msg[0] & 0x01)
 		carstate.acc = 1;
@@ -26,6 +35,18 @@ static void q3_2015_ms_2c3_handler(const uint8_t * msg, struct msg_desc_t * desc
 		carstate.ign = 0;
 }
 
+/**
+ * @brief Обработчик CAN-сообщения ID 0x65F (VIN-номер автомобиля)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит: многофреймовое сообщение UDS
+ *   - msg[0] == 0x00 — первый фрейм (3 байта VIN в msg[5:7])
+ *   - msg[0] == 0x01 — второй фрейм (7 байт VIN в msg[1:7])
+ *   - msg[0] == 0x02 — третий фрейм (7 байт VIN в msg[1:7])
+ *
+ * Вызывает: заполнение carstate.vin[0..16]
+ */
 static void q3_2015_ms_65F_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -33,20 +54,6 @@ static void q3_2015_ms_65F_handler(const uint8_t * msg, struct msg_desc_t * desc
 		carstate.vin[0] = STATE_UNDEF;
 		return;
 	}
-
-	// WAUZZZ8U4GR060231
-
-	//                      W  A  U
-	// 65F # 00 FF FF FF FF 57 41 55
-	//          Z  Z  Z  8  U  4  G
-	// 65F # 01 5A 5A 5A 38 55 34 47
-	//          R  0  6  0  2  3  1
-	// 65F # 02 52 30 36 30 32 33 31
-
-	//    6  |     1
-	// 00.36.7c.c2.01.57.41.55
-	// 01.5a.5a.5a.38.55.34.47
-	// 02.52.30.36.30.32.33.31
 
 	if (msg[0] == 0x00)
 		memcpy(carstate.vin, msg + 5, 3);
@@ -56,6 +63,14 @@ static void q3_2015_ms_65F_handler(const uint8_t * msg, struct msg_desc_t * desc
 		memcpy(carstate.vin + 10, msg + 1, 7);
 }
 
+/**
+ * @brief Обработчик CAN-сообщения ID 0x65D (одометр/пробег)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит: msg[3], msg[2], msg[1] — пробег в км (BCD-подобное представление)
+ * Вызывает: обновление carstate.odometer
+ */
 static void q3_2015_ms_65D_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -74,6 +89,16 @@ static void q3_2015_ms_65D_handler(const uint8_t * msg, struct msg_desc_t * desc
 	carstate.odometer = value;
 }
 
+/**
+ * @brief Обработчик CAN-сообщения ID 0x571 (напряжение бортовой сети)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит: msg[0] — напряжение (формула: 5 + 0.05 * msg[0])
+ * Вызывает: обновление carstate.voltage
+ *
+ * @note Пример: msg[0] = 0xA6 → 5 + 0.05 * 166 = 13.3 В
+ */
 static void q3_2015_ms_571_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -82,11 +107,24 @@ static void q3_2015_ms_571_handler(const uint8_t * msg, struct msg_desc_t * desc
 		return;
 	}
 
-	// 0x571 : a6 00 00 00 00 00 00 00
-	// 5 + (0.05 * 0xa6) = 13.3
 	carstate.voltage = 5 + (0.05 * msg[0]);
 }
 
+/**
+ * @brief Обработчик CAN-сообщения ID 0x470 (состояние дверей)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит: msg[1] — состояние дверей (биты 0..5)
+ *   - bit 0 — передняя левая дверь
+ *   - bit 1 — передняя правая дверь
+ *   - bit 2 — задняя левая дверь
+ *   - bit 3 — задняя правая дверь
+ *   - bit 4 — капот
+ *   - bit 5 — багажник
+ *
+ * Вызывает: обновление carstate.fl_door, fr_door, rl_door, rr_door, bonnet, tailgate
+ */
 static void q3_2015_ms_470_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -101,16 +139,29 @@ static void q3_2015_ms_470_handler(const uint8_t * msg, struct msg_desc_t * desc
 		return;
 	}
 
-	// 0x470 : 00 00 24 16 20 00 00 00
-
 	carstate.fl_door  = (msg[1] & 0x01) ? 1 : 0;
 	carstate.fr_door  = (msg[1] & 0x02) ? 1 : 0;
 	carstate.rl_door  = (msg[1] & 0x04) ? 1 : 0;
 	carstate.rr_door  = (msg[1] & 0x08) ? 1 : 0;
 	carstate.bonnet   = (msg[1] & 0x10) ? 1 : 0;
-	carstate.tailgate = (msg[1] & 0x20) ? 1 : 0; // 60 or 20?
+	carstate.tailgate = (msg[1] & 0x20) ? 1 : 0;
 }
 
+/**
+ * @brief Обработчик CAN-сообщения ID 0x359 (селектор АКПП и скорость)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит:
+ *   - (msg[7] >> 4) & 0x0F — положение селектора
+ *   - msg[2:1] — скорость автомобиля (км/ч, делится на 100)
+ *
+ * Вызывает: обновление carstate.selector, carstate.speed
+ *
+ * @note Кодировка селектора:
+ *       0x08 = P, 0x07 = R, 0x06 = N, 0x05 = D,
+ *       0x0A = M+, 0x0B = M-, 0x0C = S, 0x0E = M (ручной).
+ */
 static void q3_2015_ms_359_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -118,18 +169,6 @@ static void q3_2015_ms_359_handler(const uint8_t * msg, struct msg_desc_t * desc
 		carstate.selector = STATE_UNDEF;
 		return;
 	}
-
-	// Gear selector 0x359 : 80 01 00 00 00 6b 08 XX
-
-	// 88 10001000 P  136	1000XXXX 8
-	// 70 01110000 R  112	0111XXXX 7
-	// 60 01100000 N  96	0110XXXX 6
-	// 50 01010000 D  80	0101XXXX 5
-	// C0 11000000 S  192	1100XXXX 0A
-	// E0 11100000 M  224	1110XXXX 0B
-	// A0 10100000 M+ 160	1010XXXX 0C
-	// B0 10110000 M- 176	1011XXXX 0E
-
 
 	switch ((msg[7] >> 4) & 0x0f) {
 
@@ -145,16 +184,16 @@ static void q3_2015_ms_359_handler(const uint8_t * msg, struct msg_desc_t * desc
 		case 0x05:
 			carstate.selector = e_selector_d;
 			break;
-		case 0x0a: // Manual +
+		case 0x0a:
 			carstate.selector = e_selector_m_p;
 			break;
-		case 0x0b: // Мanual -
+		case 0x0b:
 			carstate.selector = e_selector_m_m;
 			break;
 		case 0x0c:
 			carstate.selector = e_selector_s;
 			break;
-		case 0x0e: // Manual
+		case 0x0e:
 			carstate.selector = e_selector_m;
 			break;
 		default:
@@ -162,13 +201,23 @@ static void q3_2015_ms_359_handler(const uint8_t * msg, struct msg_desc_t * desc
 			break;
 	}
 
-	// 0x359 : 80 01 00 00 00 6b 08 88  // 0 km\h
-
-	carstate.speed =  ((msg[2] * 256) + msg[1]) / 100; // Km\h
-	// carstate.speed =  ((msg[2] * 256) + msg[1]) / 322; // Mil
-	// carstate.speed =  ((msg[2] * 256) + msg[1]) / 192; // ?
+	carstate.speed =  ((msg[2] * 256) + msg[1]) / 100;
 }
 
+/**
+ * @brief Обработчик CAN-сообщения ID 0x5BF (кнопки на руле — SWC)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит: msg[0] — код нажатой кнопки
+ *   - 0x21 + msg[2] & 0x06 — NEXT / CONT
+ *   - 0x1B — NAVI
+ *   - 0x19 — MICI (голосовое управление)
+ *
+ * Вызывает: key_state.key_cb->next(), cont(), navi(), mici()
+ *
+ * @note Реакция на отпускание кнопки (фронт 1→0).
+ */
 static void q3_2015_ms_5BF_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -179,20 +228,6 @@ static void q3_2015_ms_5BF_handler(const uint8_t * msg, struct msg_desc_t * desc
 		key_state.key_mici = STATE_UNDEF;
 		return;
 	}
-
-	// 0x5BF : 00 00 00 11 FF FF FF FF all keys release
-	// 0x5BF : 21 00 06 11 FF FF FF FF next track
-	// 0x5BF : 1B 00 04 11 FF FF FF FF I-Nav
-	// 0x5BF : 19 00 06 11 FF FF FF FF voice
-	// 0x5BF : 02 00 01 11 FF FF FF FF right
-	// 0x5BF : 03 00 04 11 FF FF FF FF left
-	// 0x5BF : 20 00 00 11 FF FF FF FF center(mute)
-	// 0x5BF : 12 00 01 11 FF FF FF FF volume+ вверх
-	// 0x5BF : 12 00 0F 11 FF FF FF FF volume-
-	// 0x5BF : 07 00 06 11 FF FF FF FF center(menu)
-	// 0x5BF : 06 00 01 11 FF FF FF FF up(menu)
-	// 0x5BF : 06 00 0F 11 FF FF FF FF down(menu)
-	// 0x5BF : 01 00 04 11 FF FF FF FF menu
 
 	uint8_t key_next = 0;
 	uint8_t key_navi = 0;
@@ -228,6 +263,14 @@ static void q3_2015_ms_5BF_handler(const uint8_t * msg, struct msg_desc_t * desc
 	key_state.key_mici = key_mici;
 }
 
+/**
+ * @brief Обработчик CAN-сообщения ID 0x635 (освещённость/яркость)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит: msg[1] — уровень освещённости (0..0x63), масштабируется в 0..100
+ * Вызывает: обновление carstate.illum
+ */
 static void q3_2015_ms_635_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -239,6 +282,20 @@ static void q3_2015_ms_635_handler(const uint8_t * msg, struct msg_desc_t * desc
 	carstate.illum = scale(msg[1], 0x00, 0x63, 0, 100);
 }
 
+/**
+ * @brief Обработчик CAN-сообщения ID 0x3C3 (положение руля)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит:
+ *   - msg[1] & 0x7F — угол поворота
+ *   - msg[1] & 0x80 — направление (1 = право, 0 = лево)
+ *
+ * Вызывает: обновление carstate.wheel
+ *
+ * @note Данные по углу поворота руля (байты 0-1) и моменту (байты 2-3).
+ *       Угол масштабируется из 0..0x44 в 0..100.
+ */
 static void q3_2015_ms_3c3_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -247,36 +304,31 @@ static void q3_2015_ms_3c3_handler(const uint8_t * msg, struct msg_desc_t * desc
 		return;
 	}
 
-	// 0x3c3 : e0 81 00 00 80 40 f6 5
-	// 0x3C3 : 9F 2B 00 00 80 00 60 3F - extreme left position
-	// 0x3C3 : AA AB 00 00 80 40 9A 65 - extreme right position
-	// 0x3C3 : 00 00 00 00 80 C0 6F 32 - middle position
-	// 0x3C3 : 0B 80 00 00 80 20 92 51 - slightly right position
-	// 0x3C3 : 0B 00 00 00 80 60 7C 91 - slightly left position
-
-
-	// 0x3C3 - Steering status
-	// Byte 0 - Steering angle HiByte
-	// Byte 1 - Steering angle LoByte
-	// Byte 2 - Steering torque HiByte
-	// Byte 3 - Steering torque LoByte
-
-	// Angle in degrees = ((Byte1*256)+Byte0)/91? (91 seemed to come out correctly on my microcontroller with integer variables)
-	// Any ideas on toque divider? I'm assuming the data is in Nm.
-
-
 	uint8_t angle = msg[1] & 0x7f;
 	uint8_t wheel = scale(angle, 0, 0x44, 0, 100);
 
 	if (msg[1] & 0x80) {
-		// turn right
+		// поворот направо
 		carstate.wheel = wheel;
 	} else {
-		// turn left
+		// поворот налево
 		carstate.wheel = -wheel;
 	}
 }
 
+/**
+ * @brief Обработчик CAN-сообщения ID 0x35B (обороты, двигатель, температура ОЖ)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит:
+ *   - msg[2:1] — обороты двигателя (RPM, делится на 4)
+ *   - msg[3] — температура охлаждающей жидкости (формула: (msg[3] - 64) * 0.75)
+ *
+ * Вызывает: обновление carstate.taho, carstate.engine, carstate.temp
+ *
+ * @note Двигатель считается заведённым при оборотах > 500 RPM.
+ */
 static void q3_2015_ms_35b_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -286,18 +338,29 @@ static void q3_2015_ms_35b_handler(const uint8_t * msg, struct msg_desc_t * desc
 		return;
 	}
 
-	// 0x35B : 08 CC 0A BA 03 19 0E 80 // 91,5 degrees 691 RPM
-
-	carstate.taho = ((msg[2] * 256) + msg[1]) / 4; // RPM
+	carstate.taho = ((msg[2] * 256) + msg[1]) / 4;
 
 	if (carstate.taho > 500)
 		carstate.engine = 1;
 	else
 		carstate.engine = 0;
 
-	carstate.temp = (msg[3] - 64) * 0.75; // coolant
+	carstate.temp = (msg[3] - 64) * 0.75;
 }
 
+/**
+ * @brief Обработчик CAN-сообщения ID 0x621 (стояночный тормоз, уровень топлива, омывайка)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит:
+ *   - msg[0] & 0x20 — стояночный тормоз
+ *   - msg[0] & 0x04 — низкий уровень омывающей жидкости
+ *   - msg[3] & 0x7F — уровень топлива
+ *   - msg[3] & 0x80 — низкий уровень топлива
+ *
+ * Вызывает: обновление carstate.park_break, low_washer, fuel_lvl, low_fuel_lvl
+ */
 static void q3_2015_ms_621_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -308,13 +371,7 @@ static void q3_2015_ms_621_handler(const uint8_t * msg, struct msg_desc_t * desc
 		return;
 	}
 
-	// 0x621 : 20 48 10 17 01 00 00 00
-	//	byte0:xx?xxxxx - park break
-	//	byte0:xxxxx?xx - low washer
-	//	byte3:x??????? - fuel level
-	//	?xxxxxxx - low fuel level
-
-	carstate.fuel_lvl = msg[3] & 0x7F; // ? fuel level
+	carstate.fuel_lvl = msg[3] & 0x7F;
 
 	if ((msg[0] & 0x20) == 0x20)
 		carstate.park_break = 1;
@@ -333,6 +390,18 @@ static void q3_2015_ms_621_handler(const uint8_t * msg, struct msg_desc_t * desc
 		carstate.low_fuel_lvl = 0;
 }
 
+/**
+ * @brief Обработчик CAN-сообщения ID 0x3E1 (климат-контроль: скорость вентилятора, AC, обогрев заднего стекла)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит:
+ *   - (msg[4] >> 4) & 0x0F — скорость вентилятора (0..15)
+ *   - (msg[6] >> 1) & 0x01 — состояние AC
+ *   - (msg[0] >> 3) & 0x01 — обогрев заднего стекла
+ *
+ * Вызывает: обновление car_air_state.fanspeed, ac, rear
+ */
 static void q3_2015_ms_3E1_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -343,43 +412,23 @@ static void q3_2015_ms_3E1_handler(const uint8_t * msg, struct msg_desc_t * desc
 		return;
 	}
 
-	/*
-0x3E1 : 20 66 24 02 XX 00 00 01
-0000 1111 - 0F - FAN 1
-0001 1011 - 1B - FAN 2
-0010 1011 - 2B - FAN 3
-0011 1100 - 3C - FAN 4
-0101 0111 - 57 - FAN 5
-0111 0010 - 72 - FAN 6
-1000 1101 - 8D - FAN 8
-1010 1000 - A8 - FAN 9
-1100 0011 - C3 - FAN 10
-1101 1110 - DE - FAN 11
-1111 1001 - F9 - POWERFULL
-
-0x3E1 : 20 66 1F 02 0F 00 XX 02
-
-0000 0010 - 02 - AC ON
-0000 0000 - 00 - AC OFF
-
-0x3E1 : 20 66 1F 02 00 00 04 03 - ac on
-
-0x3E1 : 20 68 20 02 0F 00 00 XX
-
-00 - turbo
-01 - normal
-02 - normal
-03 - off
-
-0x3E1 : 2X 68 1F 02 0F 00 00 02
-X - rear window heating on
-*/
-
 	car_air_state.fanspeed = (msg[4] >> 4) & 0x0F;
 	car_air_state.ac = (msg[6] >> 1) & 0x01;
 	car_air_state.rear = (msg[0] >> 3) & 0x01;
 }
 
+/**
+ * @brief Обработчик CAN-сообщения ID 0x3E3 (обогрев сидений и мощный режим)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит:
+ *   - (msg[3] >> 4) & 0x03 — обогрев правого сиденья (0..3)
+ *   - (msg[3] >> 1) & 0x03 — обогрев левого сиденья (0..3)
+ *   - (msg[3] >> 6) & 0x01 — мощный режим (powerfull)
+ *
+ * Вызывает: обновление car_air_state.r_seat, l_seat, powerfull
+ */
 static void q3_2015_ms_3E3_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -389,28 +438,6 @@ static void q3_2015_ms_3E3_handler(const uint8_t * msg, struct msg_desc_t * desc
 		car_air_state.powerfull = STATE_UNDEF;
 		return;
 	}
-
-	/*
-0x3E3 : 00 00 97 XY 00 00 00 00
-
-97 - temp ?
-
-XY 36 - 0011 0110
-
-Y - left seat heating
-0000 - 0 - off
-0110 - 6 - 3 leds
-0100 - 4 - 2 leds
-0010 - 2 - 1 led
-
-X - right seat heating
-0011 - 3 - 3 leads
-0010 - 2 - 2 leads
-0001 - 1 - 1 lead
-0000 - 0 - off
-
-0100 - 4 - turbo front window airheating
-*/
 
 	switch ((msg[3] >> 4) & 0x03) {
 		case 0x01:
@@ -454,6 +481,20 @@ X - right seat heating
 		car_air_state.powerfull = 0;
 }
 
+/**
+ * @brief Обработчик CAN-сообщения ID 0x6DA (парктроник)
+ * @param msg Указатель на буфер сообщения (8 байт)
+ * @param desc Указатель на дескриптор сообщения (для таймаута)
+ *
+ * Парсит:
+ *   - msg[0] — состояние парктроника (0x42 = вкл, 0x32 = выкл)
+ *   - msg[1] & 0x01 — перед/зад (0 = перед, 1 = зад)
+ *   - msg[2..5] — расстояния по 4 зонам (левый, левый-средний, правый-средний, правый)
+ *
+ * Вызывает: обновление carstate.radar (state, fl, flm, frm, fr, rl, rlm, rrm, rr)
+ *
+ * @note Данные масштабируются в диапазон 0..99 с инверсией (99 — близко, 0 — далеко).
+ */
 static void q3_2015_ms_6DA_handler(const uint8_t * msg, struct msg_desc_t * desc)
 {
 	if (is_timeout(desc)) {
@@ -462,48 +503,18 @@ static void q3_2015_ms_6DA_handler(const uint8_t * msg, struct msg_desc_t * desc
 		return;
 	}
 
-	// 0x6DA : 42 93 FF FF FF FF 00 00
-	// 0x6DA : 42 92 FF FF FF FF 00 00
-
-	// 0x6DA : XX YY AA BB CC DD 00 00
-	// XX - 42 on 32 off
-
-	// AA - left
-	// BB - left middle
-	// СС - right middle
-	// DD - right
-
-	// YY
-	// Byte 2, bit 0: front/rear
-	// 0 front
-	// 1 rear
-
-	// XX
-	// Byte 1, bit 7: on/off
-	// 0 off
-	// 1 on
-
-	/*
-	 * // Extreme values   left  l-mid r-mid right
-	 * uint8_t fmxd[4] = { 0x55, 0x77, 0x77, 0x55 }; // front max far
-	 * uint8_t fmnd[4] = { 0x0F, 0x0C, 0x0C, 0x0F }; // front max near
-	 * uint8_t rmxd[4] = { 0x55, 0x98, 0x98, 0x55 }; // rear max far
-	 * uint8_t rmnd[4] = { 0x0F, 0x13, 0x13, 0x0F }; // rear max near
-	 *
-	 */
-
 	if (msg[0] == 0x42) {
 
 		carstate.radar.state = e_radar_on;
 
 		if (msg[1] & 0x01) {
-			// rear
+			// задние датчики
 			carstate.radar.rl = 99 - scale(msg[2], 0xf, 0x55, 0, 99);
 			carstate.radar.rlm = 99 - scale(msg[3], 0x13, 0x98, 0, 99);
 			carstate.radar.rrm = 99 - scale(msg[4], 0x13, 0x98, 0, 99);
 			carstate.radar.rr = 99 - scale(msg[5], 0xf, 0x55, 0, 99);
 		} else {
-			// front
+			// передние датчики
 			carstate.radar.fl = 99 - scale(msg[2], 0xf, 0x55, 0, 99);
 			carstate.radar.flm = 99 - scale(msg[3], 0xc, 0x77, 0, 99);
 			carstate.radar.frm = 99 - scale(msg[4], 0xc, 0x77, 0, 99);
@@ -516,21 +527,25 @@ static void q3_2015_ms_6DA_handler(const uint8_t * msg, struct msg_desc_t * desc
 		carstate.radar.state = e_radar_off;
 }
 
+/**
+ * @brief Таблица дескрипторов CAN-сообщений для Audi Q3 2015 model year
+ *
+ * Каждая запись: { CAN_ID, таймаут_мс, 0, 0, обработчик }
+ */
 static struct msg_desc_t q3_2015_ms[] =
 {
-	{ 0x2c3,  100, 0, 0, q3_2015_ms_2c3_handler }, // ACC
-	{ 0x65F,  200, 0, 0, q3_2015_ms_65F_handler }, // VIN
-	{ 0x65D, 1000, 0, 0, q3_2015_ms_65D_handler }, // Odometer
-	{ 0x571,  600, 0, 0, q3_2015_ms_571_handler }, // Voltage
-	{ 0x470,   50, 0, 0, q3_2015_ms_470_handler }, // Doors
-	{ 0x359,  100, 0, 0, q3_2015_ms_359_handler }, // Gear selector
-	{ 0x5BF,  100, 0, 0, q3_2015_ms_5BF_handler }, // Keys
-	{ 0x635,  100, 0, 0, q3_2015_ms_635_handler }, // Illum
-	{ 0x3c3,  100, 0, 0, q3_2015_ms_3c3_handler }, // Wheel
-	{ 0x35b,  100, 0, 0, q3_2015_ms_35b_handler }, // Taho
-	{ 0x621,  100, 0, 0, q3_2015_ms_621_handler }, // Break
-	{ 0x6DA,   50, 0, 0, q3_2015_ms_6DA_handler }, // Parks
-	{ 0x3E1,  500, 0, 0, q3_2015_ms_3E1_handler }, // AC
-	{ 0x3E3,  500, 0, 0, q3_2015_ms_3E3_handler }, // Seat heating
+	{ 0x2c3,  100, 0, 0, q3_2015_ms_2c3_handler },
+	{ 0x65F,  200, 0, 0, q3_2015_ms_65F_handler },
+	{ 0x65D, 1000, 0, 0, q3_2015_ms_65D_handler },
+	{ 0x571,  600, 0, 0, q3_2015_ms_571_handler },
+	{ 0x470,   50, 0, 0, q3_2015_ms_470_handler },
+	{ 0x359,  100, 0, 0, q3_2015_ms_359_handler },
+	{ 0x5BF,  100, 0, 0, q3_2015_ms_5BF_handler },
+	{ 0x635,  100, 0, 0, q3_2015_ms_635_handler },
+	{ 0x3c3,  100, 0, 0, q3_2015_ms_3c3_handler },
+	{ 0x35b,  100, 0, 0, q3_2015_ms_35b_handler },
+	{ 0x621,  100, 0, 0, q3_2015_ms_621_handler },
+	{ 0x6DA,   50, 0, 0, q3_2015_ms_6DA_handler },
+	{ 0x3E1,  500, 0, 0, q3_2015_ms_3E1_handler },
+	{ 0x3E3,  500, 0, 0, q3_2015_ms_3E3_handler },
 };
-

@@ -1,16 +1,33 @@
-/*
- * canbox_od_bmw_nbt_evo.c — Raise Oudi BMW(NBT/EVO) protocol
+/**
+ * @file canbox_od_bmw_nbt_evo.c
+ * @brief Протокол Raise Oudi BMW (NBT/EVO) для Android-головного устройства
  *
- * Fully self-contained. All symbols static except public API.
+ * Полностью самодостаточный файл. Все символы static, кроме публичного API.
+ * Компилируется через #include внутри src/canbox.c.
  */
 
 #include <string.h>
 
+/**
+ * @brief Линейное масштабирование значения из одного диапазона в другой
+ * @param value Входное значение
+ * @param in_min Минимум входного диапазона
+ * @param in_max Максимум входного диапазона
+ * @param out_min Минимум выходного диапазона
+ * @param out_max Максимум выходного диапазона
+ * @return Масштабированное значение
+ */
 static float scale(float value, float in_min, float in_max, float out_min, float out_max)
 {
 	return (((value - in_min) * (out_max - out_min)) / (in_max - in_min)) + out_min;
 }
 
+/**
+ * @brief Расчёт контрольной суммы для протокола Raise
+ * @param buf Указатель на буфер данных
+ * @param len Длина буфера
+ * @return Контрольная сумма (сумма всех байтов, инвертированная XOR 0xFF)
+ */
 static uint8_t canbox_checksum(uint8_t * buf, uint8_t len)
 {
 	uint8_t sum = 0;
@@ -20,6 +37,15 @@ static uint8_t canbox_checksum(uint8_t * buf, uint8_t len)
 	return sum;
 }
 
+/**
+ * @brief Отправка сообщения по протоколу Raise
+ * @param type Тип сообщения (байт команды)
+ * @param msg Указатель на данные
+ * @param size Размер данных
+ *
+ * Формирует пакет: [0x2E][тип][длина][данные...][чексумма]
+ * Отправляет через hw_usart_write().
+ */
 static void snd_canbox_msg(uint8_t type, uint8_t * msg, uint8_t size)
 {
 	uint8_t buf[4 + size];
@@ -33,6 +59,15 @@ static void snd_canbox_msg(uint8_t type, uint8_t * msg, uint8_t size)
 
 extern uint8_t get_rear_delay_state(void);
 
+/**
+ * @brief Отправка данных о положении рулевого колеса
+ * @param type Тип сообщения (например, 0x29 для BMW)
+ * @param min Минимальное значение угла
+ * @param max Максимальное значение угла
+ *
+ * Получает угол руля через car_get_wheel(), масштабирует и отправляет.
+ * Работает только при активном заднем ходе (get_rear_delay_state()).
+ */
 static void canbox_raise_vw_wheel_process(uint8_t type, int16_t min, int16_t max)
 {
 	if (!get_rear_delay_state())
@@ -47,6 +82,19 @@ static void canbox_raise_vw_wheel_process(uint8_t type, int16_t min, int16_t max
 	snd_canbox_msg(type, wbuf, sizeof(wbuf));
 }
 
+/**
+ * @brief Отправка данных о состоянии дверей (BMW NBT/EVO-формат)
+ *
+ * Формирует пакет 0x24, 1 байт:
+ * - бит 2: капот
+ * - бит 3: багажник
+ * - бит 4: задняя левая дверь
+ * - бит 5: задняя правая дверь
+ * - бит 6: передняя левая дверь
+ * - бит 7: передняя правая дверь
+ *
+ * Использует car_get_door_*(), car_get_tailgate(), car_get_bonnet().
+ */
 static void canbox_raise_vw_mqb_door_process(void)
 {
 	uint8_t fl_door = car_get_door_fl();
@@ -74,6 +122,18 @@ static void canbox_raise_vw_mqb_door_process(void)
 	snd_canbox_msg(0x24, &state, 1);
 }
 
+/**
+ * @brief Отправка данных парктроника (радар)
+ * @param fmax Массив максимальных значений для 4 передних датчиков
+ * @param rmax Массив максимальных значений для 4 задних датчиков
+ *
+ * Формирует и отправляет:
+ * - 0x24 с подтипом 0x00: состояние парковочного режима
+ * - 0x23: данные 4 передних датчиков
+ * - 0x22: данные 4 задних датчиков
+ *
+ * Использует car_get_radar().
+ */
 static void canbox_raise_vw_radar_process(uint8_t fmax[4], uint8_t rmax[4])
 {
 	struct radar_t radar;
@@ -108,24 +168,71 @@ static void canbox_raise_vw_radar_process(uint8_t fmax[4], uint8_t rmax[4])
 	snd_canbox_msg(0x22, rbuf, sizeof(rbuf));
 }
 
-/*
- * SWC key callbacks — empty stubs (OD BMW does not use SWC via canbox)
+/**
+ * @brief Callback: кнопка "громкость +" на руле (заглушка)
+ * @param val Величина изменения громкости (игнорируется)
+ *
+ * Для протокола Oudi BMW SWC не используется через canbox.
  */
 void canbox_inc_volume(uint8_t val) { (void)val; }
+
+/**
+ * @brief Callback: кнопка "громкость -" на руле (заглушка)
+ * @param val Величина изменения громкости (игнорируется)
+ *
+ * Для протокола Oudi BMW SWC не используется через canbox.
+ */
 void canbox_dec_volume(uint8_t val) { (void)val; }
+
+/**
+ * @brief Callback: кнопка "предыдущий трек" на руле (заглушка)
+ *
+ * Для протокола Oudi BMW SWC не используется через canbox.
+ */
 void canbox_prev(void) { }
+
+/**
+ * @brief Callback: кнопка "следующий трек" на руле (заглушка)
+ *
+ * Для протокола Oudi BMW SWC не используется через canbox.
+ */
 void canbox_next(void) { }
+
+/**
+ * @brief Callback: кнопка "режим" (MODE) на руле (заглушка)
+ *
+ * Для протокола Oudi BMW SWC не используется через canbox.
+ */
 void canbox_mode(void) { }
+
+/**
+ * @brief Callback: кнопка "продолжить/пауза" на руле (заглушка)
+ *
+ * Для протокола Oudi BMW SWC не используется через canbox.
+ */
 void canbox_cont(void) { }
+
+/**
+ * @brief Callback: кнопка "голосовой ввод / микрофон" на руле (заглушка)
+ *
+ * Для протокола Oudi BMW SWC не используется через canbox.
+ */
 void canbox_mici(void) { }
 
-/*
- * RX state machine — empty stub (OD BMW does not use Raise RX)
+/**
+ * @brief Публичный API: обработка входящего байта с USART (заглушка)
+ * @param ch Полученный байт (игнорируется)
+ *
+ * Для протокола Oudi BMW RX state machine не используется.
  */
 void canbox_rx_process(uint8_t ch) { (void)ch; }
 
-/*
- * Entry points
+/**
+ * @brief Точка входа основного цикла (250 мс)
+ *
+ * Вызывает:
+ * - canbox_raise_vw_wheel_process(0x29, -5400, 5400) — руль
+ * - canbox_raise_vw_mqb_door_process() — двери
  */
 static void canbox_od_bmw_nbt_evo_process(void)
 {
@@ -133,6 +240,11 @@ static void canbox_od_bmw_nbt_evo_process(void)
 	canbox_raise_vw_mqb_door_process();
 }
 
+/**
+ * @brief Точка входа цикла парктроника (100 мс)
+ *
+ * Вызывает canbox_raise_vw_radar_process() с диапазонами 10..10 для всех датчиков.
+ */
 static void canbox_od_bmw_nbt_evo_park_process(void)
 {
 	uint8_t fmax[4] = { 10, 10, 10, 10 };

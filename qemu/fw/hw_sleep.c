@@ -4,6 +4,11 @@
 
 #include "hw.h"
 
+/**
+ * @brief Заглушка перевода CPU в режим STOP для QEMU
+ * @note QEMU target: выполняет реальную последовательность STOP/WFI,
+ *      но в QEMU это работает как обычная задержка
+ */
 void hw_cpu_sleep(void)
 {
 	rcc_periph_clock_enable(RCC_PWR);
@@ -16,7 +21,6 @@ void hw_cpu_sleep(void)
 #if 1
 	pwr_set_stop_mode();
 	pwr_voltage_regulator_low_power_in_stop();
-	//pwr_voltage_regulator_on_in_stop();
 
 	SCB_SCR |= SCB_SCR_SLEEPDEEP;
 #endif
@@ -24,4 +28,3 @@ void hw_cpu_sleep(void)
 
 	SCB_SCR &= ~SCB_SCR_SLEEPDEEP;
 }
-
